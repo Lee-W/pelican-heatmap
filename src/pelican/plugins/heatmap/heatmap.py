@@ -19,12 +19,34 @@ output format:
 
 import json
 import os
+import shutil
 from collections import defaultdict
 from datetime import date, timedelta
+from pathlib import Path
 
 from pelican.generators import ArticlesGenerator
 
 from pelican import signals
+
+STATIC_DIR = Path(__file__).parent / "static"
+
+
+def copy_static(generators):
+    """Copy CSS and JS to output/static/heatmap/."""
+    article_generator = next(
+        (g for g in generators if isinstance(g, ArticlesGenerator)), None
+    )
+    if article_generator is None:
+        return
+
+    dest = Path(article_generator.output_path) / "static" / "heatmap"
+    dest.mkdir(parents=True, exist_ok=True)
+
+    for f in STATIC_DIR.iterdir():
+        if f.suffix in (".css", ".js"):
+            shutil.copy2(f, dest / f.name)
+
+    print(f"[writing_heatmap] copied static assets to {dest}")
 
 
 def generate_heatmap(generators):
@@ -40,7 +62,7 @@ def generate_heatmap(generators):
         date_articles[day_str].append(
             {
                 "title": article.title,
-                "url": f"/{article.url}",
+                "url": "/" + article.url,
             }
         )
 
@@ -91,3 +113,4 @@ def _calculate_streak(data: dict) -> int:
 
 def register():
     signals.all_generators_finalized.connect(generate_heatmap)
+    signals.all_generators_finalized.connect(copy_static)
