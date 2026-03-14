@@ -112,3 +112,13 @@ version_scheme = "pep440"
 version_provider = "uv"
 update_changelog_on_bump = true
 major_version_zero = true
+
+[tool.pytest]
+testpaths = ["tests"]
+addopts = ["--cov=pelican.plugins.heatmap", "--cov-report=term-missing"]
+
+[tool.coverage.run]
+source = ["pelican/plugins/heatmap"]
+
+[tool.coverage.paths]
+source = ["src/pelican/plugins/heatmap", "*/pelican/plugins/heatmap"]

@@ -19,36 +19,30 @@ output format:
 
 import json
 import os
-import shutil
 from collections import defaultdict
 from datetime import date, timedelta
-from pathlib import Path
+
+from pelican.generators import ArticlesGenerator
 
 from pelican import signals
 
-STATIC_DIR = Path(__file__).parent / "static"
 
+def generate_heatmap(generators):
+    article_generator = next(
+        (g for g in generators if isinstance(g, ArticlesGenerator)), None
+    )
+    if article_generator is None:
+        return
 
-def copy_static(generator):
-    dest = Path(generator.output_path) / "static"
-    dest.mkdir(parents=True, exist_ok=True)
-    for f in STATIC_DIR.iterdir():
-        shutil.copy2(f, dest / f.name)
-
-
-def generate_heatmap(generator):
     date_articles = defaultdict(list)
-    for article in generator.articles:
+    for article in article_generator.articles:
         day_str = article.date.strftime("%Y-%m-%d")
         date_articles[day_str].append(
             {
                 "title": article.title,
-                "url": "/" + article.url,
+                "url": f"/{article.url}",
             }
         )
-
-    if not date_articles:
-        return
 
     data = {
         day: {
@@ -59,9 +53,9 @@ def generate_heatmap(generator):
     }
 
     total = sum(v["count"] for v in data.values())
-    most_active_day = max(data, key=lambda d: data[d]["count"])
-
+    most_active_day = max(data, key=lambda d: data[d]["count"]) if data else ""
     streak = _calculate_streak(data)
+
     payload = {
         "data": data,
         "total": total,
@@ -69,17 +63,20 @@ def generate_heatmap(generator):
         "most_active_day": most_active_day,
     }
 
-    output_path = os.path.join(generator.output_path, "writing-heatmap.json")
+    os.makedirs(article_generator.output_path, exist_ok=True)
+    output_path = os.path.join(article_generator.output_path, "writing-heatmap.json")
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False, indent=2)
 
-    print(f"[pelican_heatmap] Generate `writing-heatmap.json` with {total} articles")
+    print(f"[writing_heatmap] generated writing-heatmap.json ({total} articles)")
 
 
 def _calculate_streak(data: dict) -> int:
     today = date.today()
     streak = 0
-    current = today
+
+    start = today if today.strftime("%Y-%m-%d") in data else today - timedelta(days=1)
+    current = start
 
     while True:
         key = current.strftime("%Y-%m-%d")
@@ -87,14 +84,10 @@ def _calculate_streak(data: dict) -> int:
             streak += 1
             current -= timedelta(days=1)
         else:
-            if current == today:
-                current -= timedelta(days=1)
-                continue
             break
 
     return streak
 
 
 def register():
-    signals.article_generator_finalized.connect(generate_heatmap)
-    signals.finalized.connect(copy_static)
+    signals.all_generators_finalized.connect(generate_heatmap)
