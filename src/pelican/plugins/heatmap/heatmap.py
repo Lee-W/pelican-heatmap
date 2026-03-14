@@ -70,6 +70,7 @@ def generate_heatmap(generator):
     }
 
     output_path = os.path.join(generator.output_path, "writing-heatmap.json")
+    os.makedirs(generator.output_path, exist_ok=True)
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False, indent=2)
 
