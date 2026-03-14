@@ -1,0 +1,336 @@
+/* Customizable classes:
+
+   Layout
+     #writing-heatmap          — outer wrapper
+     .hm-stats                 — stats row
+     .hm-stat-card             — individual stat card
+     .hm-stat-num              — large number in card
+     .hm-stat-label            — label below number
+
+   Navigation
+     .hm-nav                   — nav row (buttons + range)
+     .hm-nav-btn               — prev/next buttons
+     .hm-nav-range             — date range text
+
+   Grid
+     .hm-container             — scrollable wrapper
+     .hm-month-label-cell      — each column's month span
+     .hm-month-label-cell--visible — span that shows a month name
+     .hm-day-labels            — Su Mo Tu ... column
+     .hm-grid                  — the cell grid
+     .hm-cell                  — individual day cell
+     .hm-cell[data-level="0-4"] — color levels (0=empty, 4=most)
+     .hm-cell--future          — days after today
+     .hm-cell--past            — days before earliest article
+
+   Legend
+     .hm-legend                — legend row
+     .hm-legend-cell           — legend color swatch
+
+   Tooltip
+     .hm-tooltip               — tooltip container
+     .hm-tooltip.hm-visible    — tooltip when shown
+     .hm-tooltip.hm-pinned     — tooltip when clicked/pinned
+     .hm-tt-date               — date line inside tooltip
+     .hm-tt-list               — article list
+     .hm-tt-empty              — "No posts" message
+
+   CSS custom properties (override in :root or a parent selector):
+     --hm-card-bg              — stat card background
+     --hm-text-num             — stat number color
+     --hm-text-muted           — muted text color
+     --hm-label-col            — month/legend label color
+     --hm-label-day            — weekday label color
+     --hm-cell-empty           — empty cell color
+     --hm-btn-bg               — nav button background
+     --hm-btn-hover            — nav button hover background
+     --hm-btn-text             — nav button text color
+     --hm-btn-dis              — disabled button text color
+   ─────────────────────────────────────────────────────
+*/
+
+/* writing_heatmap.css */
+
+:root {
+  --hm-card-bg: #f0ede8;
+  --hm-text-num: #1a1a1a;
+  --hm-text-muted: #888;
+  --hm-label-col: #aaa;
+  --hm-label-day: #bbb;
+  --hm-cell-size: 14px;
+  --hm-cell-empty: #e8e6e1;
+  --hm-btn-bg: #ede9e3;
+  --hm-btn-hover: #ddd9d2;
+  --hm-btn-text: #555;
+  --hm-btn-dis: #ccc;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --hm-card-bg: #242420;
+    --hm-text-num: #f0ede8;
+    --hm-text-muted: #666;
+    --hm-label-col: #555;
+    --hm-label-day: #4a4a46;
+    --hm-cell-size: 14px;
+    --hm-cell-empty: #2a2a26;
+    --hm-btn-bg: #2a2a26;
+    --hm-btn-hover: #333330;
+    --hm-btn-text: #aaa;
+    --hm-btn-dis: #3a3a36;
+  }
+}
+
+#writing-heatmap {
+  max-width: 100%;
+}
+
+/* Stats */
+.hm-stats {
+  display: flex;
+  gap: 0.9rem;
+  margin-bottom: 1.6rem;
+  flex-wrap: wrap;
+}
+.hm-stat-card {
+  background: var(--hm-card-bg);
+  border-radius: 10px;
+  padding: 1.2rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  min-width: 100px;
+  max-width: 220px;
+}
+.hm-stat-num {
+  font-size: 1.7rem;
+  font-weight: 700;
+  color: var(--hm-text-num);
+  line-height: 1;
+  transition: opacity 0.2s;
+}
+.hm-stat-num.hm-updating {
+  opacity: 0.35;
+}
+.hm-stat-label {
+  font-size: 0.85rem;
+  color: var(--hm-text-muted);
+  margin-top: 0.4rem;
+  letter-spacing: 0.03em;
+  text-align: center;
+  line-height: 1.4;
+}
+
+/* Nav — uses div instead of button to avoid theme CSS interference */
+.hm-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.8rem;
+}
+.hm-nav-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: var(--hm-btn-bg);
+  color: var(--hm-btn-text);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  user-select: none;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+.hm-nav-btn:hover {
+  background: var(--hm-btn-hover);
+}
+.hm-nav-btn[data-disabled="true"] {
+  color: var(--hm-btn-dis);
+  cursor: default;
+  pointer-events: none;
+}
+.hm-nav-range {
+  font-size: 0.9rem;
+  color: var(--hm-text-muted);
+  letter-spacing: 0.03em;
+  min-width: 160px;
+}
+
+/* Grid */
+.hm-container {
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+}
+.hm-inner {
+  display: inline-flex;
+  flex-direction: column;
+}
+.hm-month-labels {
+  display: flex;
+  margin-bottom: 4px;
+  padding-left: 38px;
+}
+.hm-month-label-cell {
+  display: block;
+  flex-shrink: 0;
+  width: calc(var(--hm-cell-size, 14px) + 2px);
+}
+.hm-month-label-cell--visible {
+  font-size: 0.85rem;
+  color: var(--hm-label-col);
+  overflow: visible;
+  white-space: nowrap;
+}
+.hm-grid-wrap {
+  display: flex;
+  gap: 6px;
+}
+.hm-day-labels {
+  display: grid;
+  grid-template-rows: repeat(7, var(--hm-cell-size, 14px));
+  gap: 2px;
+  padding-top: 2px;
+  font-size: 0.82rem;
+  line-height: 14px;
+  color: var(--hm-label-day);
+  text-align: right;
+  width: 32px;
+  flex-shrink: 0;
+}
+.hm-grid {
+  display: grid;
+  grid-template-rows: repeat(7, var(--hm-cell-size, 14px));
+  grid-auto-flow: column;
+  gap: 2px;
+}
+
+.hm-cell {
+  width: var(--hm-cell-size, 14px);
+  height: var(--hm-cell-size, 14px);
+  border-radius: 2px;
+  background: var(--hm-cell-empty);
+  cursor: pointer;
+  transition: transform 0.1s;
+  flex-shrink: 0;
+}
+.hm-cell:hover {
+  transform: scale(1.35);
+  z-index: 1;
+  position: relative;
+}
+.hm-cell--future {
+  opacity: 0.15;
+  pointer-events: none;
+}
+.hm-cell--past {
+  opacity: 0.15;
+  pointer-events: none;
+}
+.hm-cell[data-level="0"] {
+  background: var(--hm-cell-empty);
+}
+.hm-cell[data-level="1"] {
+  background: #b5d8a4;
+}
+.hm-cell[data-level="2"] {
+  background: #6db86a;
+}
+.hm-cell[data-level="3"] {
+  background: #3a9142;
+}
+.hm-cell[data-level="4"] {
+  background: #1d6230;
+}
+
+/* Legend */
+.hm-legend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 1rem;
+  font-size: 0.85rem;
+  color: var(--hm-label-col);
+}
+.hm-legend-cell {
+  display: inline-block;
+  width: var(--hm-cell-size, 14px);
+  height: var(--hm-cell-size, 14px);
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.hm-legend-cell[data-level="0"] {
+  background: var(--hm-cell-empty);
+}
+.hm-legend-cell[data-level="1"] {
+  background: #b5d8a4;
+}
+.hm-legend-cell[data-level="2"] {
+  background: #6db86a;
+}
+.hm-legend-cell[data-level="3"] {
+  background: #3a9142;
+}
+.hm-legend-cell[data-level="4"] {
+  background: #1d6230;
+}
+
+/* Tooltip — always dark */
+.hm-tooltip {
+  position: fixed;
+  background: #1c1c1c;
+  color: #f5f5f5;
+  padding: 0.65rem 0.9rem;
+  border-radius: 8px;
+  font-size: 1rem;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.12s;
+  z-index: 9999;
+  line-height: 1.7;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+  max-width: 280px;
+  white-space: normal;
+}
+.hm-tooltip.hm-visible {
+  opacity: 1;
+}
+.hm-tooltip.hm-pinned {
+  pointer-events: auto;
+  outline: 1.5px solid #3a9142;
+}
+.hm-tt-date {
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+  color: #aaa;
+  font-size: 0.9rem;
+  letter-spacing: 0.04em;
+}
+.hm-tt-list {
+  list-style: none;
+}
+.hm-tt-list li {
+  display: flex;
+  gap: 0.4rem;
+  align-items: baseline;
+}
+.hm-tt-num {
+  color: #6db86a;
+  flex-shrink: 0;
+}
+.hm-tt-list a {
+  color: #f5f5f5;
+  text-decoration: underline;
+  text-decoration-color: rgba(245, 245, 245, 0.3);
+  text-underline-offset: 2px;
+}
+.hm-tt-list a:hover {
+  color: #6db86a;
+  text-decoration-color: #6db86a;
+}
+.hm-tt-empty {
+  color: #666;
+  font-size: 0.95rem;
+}
