@@ -117,8 +117,9 @@
     return Math.ceil((today - earliestDate) / (365 * 86400000));
   }
   function windowDates(offset) {
-    const end = new Date(today);
-    end.setDate(end.getDate() + (6 - today.getDay()));
+    const base = new Date(today);
+    base.setDate(base.getDate() + (6 - today.getDay())); // 本週六
+    const end = new Date(base);
     end.setFullYear(end.getFullYear() - offset);
     const start = new Date(end);
     start.setDate(start.getDate() - 364);
@@ -184,7 +185,8 @@
         colIndex++;
       }
 
-      const key = cur.toISOString().slice(0, 10);
+      // Use local date to avoid UTC offset shifting the day
+      const key = `${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, "0")}-${String(cur.getDate()).padStart(2, "0")}`;
       const entry = heatmapData[key];
       const count = entry ? entry.count : 0;
       const isFuture = cur > today;
