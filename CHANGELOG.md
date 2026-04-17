@@ -1,3 +1,9 @@
+## 0.2.4 (2026-04-17)
+
+### Fix
+
+- **css**: scope variables to #writing-heatmap and use light-dark() fo… (#5)
+
 ## 0.2.3 (2026-03-17)
 
 ### Fix
