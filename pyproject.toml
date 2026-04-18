@@ -1,6 +1,6 @@
 [project]
 name = "pelican-heatmap"
-version = "0.2.4"
+version = "0.2.5"
 description = "A Pelican plugin that generates a GitHub-style writing heatmap from your articles"
 readme = "README.md"
 license = { text = "MIT" }

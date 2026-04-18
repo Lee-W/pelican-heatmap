@@ -1,3 +1,9 @@
+## 0.2.5 (2026-04-18)
+
+### Fix
+
+- **css**: improve dark mode contrast for text and empty cells (#6)
+
 ## 0.2.4 (2026-04-17)
 
 ### Fix
