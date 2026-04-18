@@ -70,10 +70,10 @@
   #writing-heatmap {
     --hm-card-bg: light-dark(#f0ede8, #242420);
     --hm-text-num: light-dark(#1a1a1a, #f0ede8);
-    --hm-text-muted: light-dark(#888, #666);
-    --hm-label-col: light-dark(#aaa, #555);
-    --hm-label-day: light-dark(#bbb, #4a4a46);
-    --hm-cell-empty: light-dark(#e8e6e1, #2a2a26);
+    --hm-text-muted: light-dark(#888, #bbb);
+    --hm-label-col: light-dark(#aaa, #999);
+    --hm-label-day: light-dark(#bbb, #888);
+    --hm-cell-empty: light-dark(#e8e6e1, #4a4a46);
     --hm-btn-bg: light-dark(#ede9e3, #2a2a26);
     --hm-btn-hover: light-dark(#ddd9d2, #333330);
     --hm-btn-text: light-dark(#555, #aaa);
