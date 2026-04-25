@@ -56,7 +56,8 @@
       next_year: "後一年",
     },
   };
-  const base = LOCALES[window.HM_LANG] || LOCALES.en;
+  const lang = window.HM_LANG || document.documentElement.lang || "en";
+  const base = LOCALES[lang] || LOCALES[lang.split("-")[0]] || LOCALES.en;
   const L = Object.assign({}, base, window.HM_LOCALE || {});
 
   // ── Mount point ───────────────────────────────────────────

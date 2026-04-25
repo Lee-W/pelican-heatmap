@@ -70,25 +70,29 @@ The plugin generates `output/writing-heatmap.json` and copies the static assets.
 
 ## Localization
 
-Pick a built-in locale by setting `window.HM_LANG` **before** the script loads:
+The widget automatically reads `<html lang="...">` to pick the right locale. For example, if your page has `<html lang="zh-TW">`, the heatmap renders in Taiwanese Mandarin with no extra configuration.
+
+Available built-in locales: `en` (default), `zh-TW`.
+
+You can explicitly override with `window.HM_LANG`:
 
 ```html
 <script>window.HM_LANG = "zh-TW";</script>
-<script src="/static/pelican_heatmap.js" defer></script>
 ```
 
-Available locales: `en` (default), `zh-TW`.
+Resolution order: `window.HM_LANG` > `<html lang>` > `en`.
 
 You can also override individual keys on top of any locale with `window.HM_LOCALE`:
 
 ```html
 <script>
-window.HM_LANG = "zh-TW";
 window.HM_LOCALE = { no_posts: '無文章' }; // override just one key
 </script>
 ```
 
-All keys are optional — omitted keys fall back to the chosen locale's defaults.
+All keys are optional — omitted keys fall back to the resolved locale's defaults.
+
+The heatmap data (`writing-heatmap.json`) is shared across all languages — only the UI strings change per locale.
 
 ---
 
