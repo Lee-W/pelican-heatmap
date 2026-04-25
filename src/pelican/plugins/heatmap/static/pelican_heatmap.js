@@ -1,33 +1,63 @@
 (async function () {
   // ── i18n ──────────────────────────────────────────────────
-  // Override via window.HM_LOCALE before the script loads:
+  // Option 1 – pick a built-in locale:
+  //   <script>window.HM_LANG = "zh-TW";</script>
+  // Option 2 – full custom override (merges on top of the chosen locale):
   //   <script>window.HM_LOCALE = { months: [...], days: [...], ... }</script>
-  const DEFAULT_LOCALE = {
-    months: [
-      "Jan",
-      "Feb",
-      "Mar",
-      "Apr",
-      "May",
-      "Jun",
-      "Jul",
-      "Aug",
-      "Sep",
-      "Oct",
-      "Nov",
-      "Dec",
-    ],
-    days: ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"],
-    less: "Less",
-    more: "More",
-    no_posts: "No posts",
-    posts: "posts",
-    alltime: "all\u2011time\nposts", // \u2011 = non-breaking hyphen
-    streak: "day\nstreak",
-    prev_year: "Previous year",
-    next_year: "Next year",
+  const LOCALES = {
+    en: {
+      months: [
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec",
+      ],
+      days: ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"],
+      less: "Less",
+      more: "More",
+      no_posts: "No posts",
+      posts: "posts",
+      alltime: "all\u2011time\nposts", // \u2011 = non-breaking hyphen
+      streak: "day\nstreak",
+      prev_year: "Previous year",
+      next_year: "Next year",
+    },
+    "zh-TW": {
+      months: [
+        "1月",
+        "2月",
+        "3月",
+        "4月",
+        "5月",
+        "6月",
+        "7月",
+        "8月",
+        "9月",
+        "10月",
+        "11月",
+        "12月",
+      ],
+      days: ["日", "一", "二", "三", "四", "五", "六"],
+      less: "少",
+      more: "多",
+      no_posts: "沒有文章",
+      posts: "篇文章",
+      alltime: "所有\n文章",
+      streak: "天\n連續發文",
+      prev_year: "前一年",
+      next_year: "後一年",
+    },
   };
-  const L = Object.assign({}, DEFAULT_LOCALE, window.HM_LOCALE || {});
+  const base = LOCALES[window.HM_LANG] || LOCALES.en;
+  const L = Object.assign({}, base, window.HM_LOCALE || {});
 
   // ── Mount point ───────────────────────────────────────────
   const root = document.getElementById("writing-heatmap");
