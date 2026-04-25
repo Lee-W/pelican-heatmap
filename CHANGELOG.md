@@ -1,3 +1,9 @@
+## 0.3.1 (2026-04-25)
+
+### Fix
+
+- **i18n**: make locale lookup case-insensitive
+
 ## 0.3.0 (2026-04-25)
 
 ### Feat
