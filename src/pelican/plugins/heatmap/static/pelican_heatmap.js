@@ -63,7 +63,11 @@
   const root = document.getElementById("writing-heatmap");
   if (!root) return;
 
+  const dataUrl =
+    root.getAttribute("data-src") || window.HM_DATA_URL || "/writing-heatmap.json";
+
   // ── Inject HTML ───────────────────────────────────────────
+  root.setAttribute("aria-busy", "true");
   root.innerHTML = `
     <div class="hm-stats">
       <div class="hm-stat-card">
@@ -112,12 +116,12 @@
     allTotal = 0,
     streak = 0;
   try {
-    const json = await fetch("/writing-heatmap.json").then((r) => r.json());
+    const json = await fetch(dataUrl).then((r) => r.json());
     heatmapData = json.data ?? {};
     allTotal = json.total ?? 0;
     streak = json.streak ?? 0;
   } catch (e) {
-    console.warn("[writing_heatmap] failed to load writing-heatmap.json", e);
+    console.warn("[writing_heatmap] failed to load " + dataUrl, e);
   }
 
   // ── Static stats ──────────────────────────────────────────
@@ -287,6 +291,22 @@
         tooltip.dataset.pinnedKey = _key;
         e.stopPropagation();
       });
+      cell.addEventListener("touchstart", (e) => {
+        if (isFuture || isPast) return;
+        e.preventDefault();
+        const touch = e.touches[0];
+        const same =
+          tooltip.classList.contains("hm-pinned") &&
+          tooltip.dataset.pinnedKey === _key;
+        tooltip.classList.remove("hm-pinned", "hm-visible");
+        tooltip.dataset.pinnedKey = "";
+        if (same) return;
+        tooltip.innerHTML = buildHTML();
+        posTooltip(touch.clientX, touch.clientY);
+        tooltip.classList.add("hm-visible", "hm-pinned");
+        tooltip.dataset.pinnedKey = _key;
+        e.stopPropagation();
+      }, { passive: false });
 
       grid.appendChild(cell);
       cur.setDate(cur.getDate() + 1);
@@ -321,10 +341,27 @@
     windowOffset--;
     render();
   });
+  btnPrev.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      if (btnPrev.dataset.disabled) return;
+      windowOffset++;
+      render();
+    }
+  });
+  btnNext.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      if (btnNext.dataset.disabled) return;
+      windowOffset--;
+      render();
+    }
+  });
   document.addEventListener("click", () => {
     tooltip.classList.remove("hm-pinned", "hm-visible");
     tooltip.dataset.pinnedKey = "";
   });
 
   render();
+  root.removeAttribute("aria-busy");
 })();

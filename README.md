@@ -9,10 +9,14 @@ A [Pelican](https://getpelican.com) plugin that generates a GitHub-style writing
 - **GitHub-style heatmap** — one cell per day, four color levels based on post frequency
 - **Year navigation** — scroll back through your entire writing history with ‹ › buttons; the view always opens on the most recent year
 - **Live stats** — posts in the current view window, all-time total, and current streak
-- **Clickable cells** — click any day to pin a tooltip listing that day's articles with links; click again to dismiss
+- **Clickable cells** — click or tap any day to pin a tooltip listing that day's articles with links; click again to dismiss
 - **Dark mode** — respects `prefers-color-scheme` automatically
-- **i18n** — all UI strings are overridable via `window.HM_LOCALE`
-- **Customizable** — every element has a named CSS class and the color palette is controlled by CSS custom properties
+- **Responsive** — cell size scales with viewport via `clamp()`; works on mobile and large screens
+- **Accessible** — keyboard-navigable year buttons, `aria-busy` loading state, `<noscript>` fallback support
+- **Touch-friendly** — dedicated touch handling for tooltips on mobile devices
+- **i18n** — built-in locales (`en`, `zh-TW`) via `window.HM_LANG`, or full custom override via `window.HM_LOCALE`
+- **Customizable** — every element has a named CSS class; colors and sizing controlled by CSS custom properties (`--hm-level-1`–`4`, `--hm-cell-size`, etc.)
+- **Configurable data source** — override the JSON URL via `data-src` attribute or `window.HM_DATA_URL`
 - **Zero dependencies** — no third-party libraries required
 
 ## Installation
@@ -66,27 +70,58 @@ The plugin generates `output/writing-heatmap.json` and copies the static assets.
 
 ## Localization
 
-Override any UI string by setting `window.HM_LOCALE` **before** the script loads:
+Pick a built-in locale by setting `window.HM_LANG` **before** the script loads:
+
+```html
+<script>window.HM_LANG = "zh-TW";</script>
+<script src="/static/pelican_heatmap.js" defer></script>
+```
+
+Available locales: `en` (default), `zh-TW`.
+
+You can also override individual keys on top of any locale with `window.HM_LOCALE`:
 
 ```html
 <script>
-window.HM_LOCALE = {
-  months:    ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'],
-  days:      ['日','一','二','三','四','五','六'],
-  less:      '少',
-  more:      '多',
-  no_posts:  '無文章',
-  posts:     '篇',
-  alltime:   '累計\n篇數',
-  streak:    '連續\n天數',
-  prev_year: '往前一年',
-  next_year: '往後一年',
-};
+window.HM_LANG = "zh-TW";
+window.HM_LOCALE = { no_posts: '無文章' }; // override just one key
 </script>
-<script src="/static/writing_heatmap.js" defer></script>
 ```
 
-All keys are optional — omitted keys fall back to the English defaults.
+All keys are optional — omitted keys fall back to the chosen locale's defaults.
+
+---
+
+## Custom data URL
+
+By default the widget fetches `/writing-heatmap.json`. Override this if your site is served from a subpath:
+
+```html
+<div id="writing-heatmap" data-src="/blog/writing-heatmap.json"></div>
+```
+
+Or via JavaScript:
+
+```html
+<script>window.HM_DATA_URL = "/blog/writing-heatmap.json";</script>
+```
+
+Resolution order: `data-src` attribute > `window.HM_DATA_URL` > `/writing-heatmap.json`.
+
+---
+
+## No-JavaScript fallback
+
+Place fallback content inside the mount div. The widget replaces it once JS loads:
+
+```html
+<div id="writing-heatmap">
+  <noscript>
+    <p>Enable JavaScript to see the writing activity heatmap.</p>
+  </noscript>
+  <p class="hm-loading">Loading heatmap…</p>
+</div>
+```
 
 ---
 
@@ -98,8 +133,12 @@ Override these in `:root` or any parent selector:
 
 | Property | Default (light) | Description |
 | --- | --- | --- |
-| `--hm-cell-size` | `14px` | Cell and row height; scales the whole grid |
+| `--hm-cell-size` | `clamp(10px, 1.2vw, 18px)` | Cell and row height; scales the whole grid |
 | `--hm-cell-empty` | `#e8e6e1` | Empty cell color |
+| `--hm-level-1` | `#b5d8a4` | Level 1 cell color (lowest activity) |
+| `--hm-level-2` | `#6db86a` | Level 2 cell color |
+| `--hm-level-3` | `#3a9142` | Level 3 cell color |
+| `--hm-level-4` | `#1d6230` | Level 4 cell color (highest activity) |
 | `--hm-card-bg` | `#f0ede8` | Stat card background |
 | `--hm-text-num` | `#1a1a1a` | Large number color |
 | `--hm-text-muted` | `#888` | Label and secondary text |
@@ -121,10 +160,12 @@ Example — larger cells:
 ### Color levels
 
 ```css
-.hm-cell[data-level="1"] { background: #a8c8f8; }
-.hm-cell[data-level="2"] { background: #5a9fd4; }
-.hm-cell[data-level="3"] { background: #2376b7; }
-.hm-cell[data-level="4"] { background: #0d4f8a; }
+#writing-heatmap {
+  --hm-level-1: #a8c8f8;
+  --hm-level-2: #5a9fd4;
+  --hm-level-3: #2376b7;
+  --hm-level-4: #0d4f8a;
+}
 ```
 
 ### Full class reference
@@ -155,6 +196,7 @@ Example — larger cells:
 .hm-tt-date                    date line inside tooltip
 .hm-tt-list                    article list inside tooltip
 .hm-tt-empty                   "No posts" message
+.hm-loading                    loading placeholder (replaced by widget)
 ```
 
 ---
