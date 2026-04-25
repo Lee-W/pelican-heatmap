@@ -1,3 +1,16 @@
+## 0.3.0 (2026-04-25)
+
+### Feat
+
+- **a11y**: improve keyboard, screen reader, and motion accessibility
+- **ux**: improve accessibility, mobile support, and customizability
+- **ux**: improve accessibility, mobile support, and customizability
+- **i18n**: add zh-TW locale and built-in language selection
+
+### Fix
+
+- **ci**: skip release step when commitizen produces no version
+
 ## 0.2.5 (2026-04-18)
 
 ### Fix
