@@ -9,10 +9,11 @@ A [Pelican](https://getpelican.com) plugin that generates a GitHub-style writing
 - **GitHub-style heatmap** — one cell per day, four color levels based on post frequency
 - **Year navigation** — scroll back through your entire writing history with ‹ › buttons; the view always opens on the most recent year
 - **Live stats** — posts in the current view window, all-time total, and current streak
-- **Clickable cells** — click or tap any day to pin a tooltip listing that day's articles with links; click again to dismiss
+- **Clickable cells** — click or tap any day to pin a tooltip listing that day's articles with links; click again or press Escape to dismiss
 - **Dark mode** — respects `prefers-color-scheme` automatically
+- **Reduced motion** — respects `prefers-reduced-motion` by disabling animations
 - **Responsive** — cell size scales with viewport via `clamp()`; works on mobile and large screens
-- **Accessible** — keyboard-navigable year buttons, `aria-busy` loading state, `<noscript>` fallback support
+- **Accessible** — keyboard-navigable year buttons with visible focus ring, `aria-label` for screen readers, Escape to dismiss tooltips, `aria-busy` loading state, `<noscript>` fallback support
 - **Touch-friendly** — dedicated touch handling for tooltips on mobile devices
 - **i18n** — built-in locales (`en`, `zh-TW`) via `window.HM_LANG`, or full custom override via `window.HM_LOCALE`
 - **Customizable** — every element has a named CSS class; colors and sizing controlled by CSS custom properties (`--hm-level-1`–`4`, `--hm-cell-size`, etc.)
