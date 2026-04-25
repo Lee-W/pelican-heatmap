@@ -86,8 +86,8 @@
     </div>
 
     <div class="hm-nav">
-      <div class="hm-nav-btn" id="hm-btn-prev" role="button" tabindex="0" title="${L.prev_year}">&#8249;</div>
-      <div class="hm-nav-btn" id="hm-btn-next" role="button" tabindex="0" title="${L.next_year}">&#8250;</div>
+      <div class="hm-nav-btn" id="hm-btn-prev" role="button" tabindex="0" title="${L.prev_year}" aria-label="${L.prev_year}">&#8249;</div>
+      <div class="hm-nav-btn" id="hm-btn-next" role="button" tabindex="0" title="${L.next_year}" aria-label="${L.next_year}">&#8250;</div>
       <span class="hm-nav-range" id="hm-nav-range"></span>
     </div>
 
@@ -260,6 +260,7 @@
           y = cy - th - 8;
         if (x + tw > window.innerWidth - 8) x = cx - tw - 14;
         if (y < 8) y = cy + 20;
+        if (y + th > window.innerHeight - 8) y = cy - th - 8;
         tooltip.style.left = x + "px";
         tooltip.style.top = y + "px";
       }
@@ -361,6 +362,12 @@
   document.addEventListener("click", () => {
     tooltip.classList.remove("hm-pinned", "hm-visible");
     tooltip.dataset.pinnedKey = "";
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      tooltip.classList.remove("hm-pinned", "hm-visible");
+      tooltip.dataset.pinnedKey = "";
+    }
   });
 
   render();
