@@ -42,6 +42,10 @@
      --hm-label-col            — month/legend label color
      --hm-label-day            — weekday label color
      --hm-cell-empty           — empty cell color
+     --hm-level-1              — level 1 cell color (lowest activity)
+     --hm-level-2              — level 2 cell color
+     --hm-level-3              — level 3 cell color
+     --hm-level-4              — level 4 cell color (highest activity)
      --hm-btn-bg               — nav button background
      --hm-btn-hover            — nav button hover background
      --hm-btn-text             — nav button text color
@@ -57,8 +61,12 @@
   --hm-text-muted: #888;
   --hm-label-col: #aaa;
   --hm-label-day: #bbb;
-  --hm-cell-size: 14px;
+  --hm-cell-size: clamp(10px, 1.2vw, 18px);
   --hm-cell-empty: #e8e6e1;
+  --hm-level-1: #b5d8a4;
+  --hm-level-2: #6db86a;
+  --hm-level-3: #3a9142;
+  --hm-level-4: #1d6230;
   --hm-btn-bg: #ede9e3;
   --hm-btn-hover: #ddd9d2;
   --hm-btn-text: #555;
@@ -74,6 +82,10 @@
     --hm-label-col: light-dark(#aaa, #999);
     --hm-label-day: light-dark(#bbb, #888);
     --hm-cell-empty: light-dark(#e8e6e1, #4a4a46);
+    --hm-level-1: light-dark(#b5d8a4, #0e4429);
+    --hm-level-2: light-dark(#6db86a, #006d32);
+    --hm-level-3: light-dark(#3a9142, #26a641);
+    --hm-level-4: light-dark(#1d6230, #39d353);
     --hm-btn-bg: light-dark(#ede9e3, #2a2a26);
     --hm-btn-hover: light-dark(#ddd9d2, #333330);
     --hm-btn-text: light-dark(#555, #aaa);
@@ -226,28 +238,11 @@
   opacity: 0.15;
   pointer-events: none;
 }
-.hm-cell[data-level="0"] {
-  background: var(--hm-cell-empty);
-}
-.hm-cell[data-level="1"] {
-  background: #b5d8a4;
-}
-.hm-cell[data-level="2"] {
-  background: #6db86a;
-}
-.hm-cell[data-level="3"] {
-  background: #3a9142;
-}
-.hm-cell[data-level="4"] {
-  background: #1d6230;
-}
-
-@supports (color: light-dark(white, black)) {
-  .hm-cell[data-level="1"] { background: light-dark(#b5d8a4, #0e4429); }
-  .hm-cell[data-level="2"] { background: light-dark(#6db86a, #006d32); }
-  .hm-cell[data-level="3"] { background: light-dark(#3a9142, #26a641); }
-  .hm-cell[data-level="4"] { background: light-dark(#1d6230, #39d353); }
-}
+.hm-cell[data-level="0"] { background: var(--hm-cell-empty); }
+.hm-cell[data-level="1"] { background: var(--hm-level-1); }
+.hm-cell[data-level="2"] { background: var(--hm-level-2); }
+.hm-cell[data-level="3"] { background: var(--hm-level-3); }
+.hm-cell[data-level="4"] { background: var(--hm-level-4); }
 
 /* Legend */
 .hm-legend {
@@ -265,27 +260,17 @@
   border-radius: 2px;
   flex-shrink: 0;
 }
-.hm-legend-cell[data-level="0"] {
-  background: var(--hm-cell-empty);
-}
-.hm-legend-cell[data-level="1"] {
-  background: #b5d8a4;
-}
-.hm-legend-cell[data-level="2"] {
-  background: #6db86a;
-}
-.hm-legend-cell[data-level="3"] {
-  background: #3a9142;
-}
-.hm-legend-cell[data-level="4"] {
-  background: #1d6230;
-}
+.hm-legend-cell[data-level="0"] { background: var(--hm-cell-empty); }
+.hm-legend-cell[data-level="1"] { background: var(--hm-level-1); }
+.hm-legend-cell[data-level="2"] { background: var(--hm-level-2); }
+.hm-legend-cell[data-level="3"] { background: var(--hm-level-3); }
+.hm-legend-cell[data-level="4"] { background: var(--hm-level-4); }
 
-@supports (color: light-dark(white, black)) {
-  .hm-legend-cell[data-level="1"] { background: light-dark(#b5d8a4, #0e4429); }
-  .hm-legend-cell[data-level="2"] { background: light-dark(#6db86a, #006d32); }
-  .hm-legend-cell[data-level="3"] { background: light-dark(#3a9142, #26a641); }
-  .hm-legend-cell[data-level="4"] { background: light-dark(#1d6230, #39d353); }
+/* Loading / noscript fallback */
+#writing-heatmap .hm-loading {
+  color: var(--hm-text-muted);
+  font-size: 15px;
+  padding: 1rem 0;
 }
 
 /* Tooltip — always dark */
