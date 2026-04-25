@@ -26,6 +26,7 @@ jobs:
           branch: main
 
       - name: Release
+        if: steps.cz.outputs.version != ''
         uses: ncipollo/release-action@v1
         with:
           tag: ${{ steps.cz.outputs.version }}
