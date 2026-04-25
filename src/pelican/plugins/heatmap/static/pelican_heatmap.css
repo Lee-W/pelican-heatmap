@@ -156,6 +156,10 @@
 .hm-nav-btn:hover {
   background: var(--hm-btn-hover);
 }
+.hm-nav-btn:focus-visible {
+  outline: 2px solid var(--hm-btn-text);
+  outline-offset: 2px;
+}
 .hm-nav-btn[data-disabled="true"] {
   color: var(--hm-btn-dis);
   cursor: default;
@@ -265,6 +269,25 @@
 .hm-legend-cell[data-level="2"] { background: var(--hm-level-2); }
 .hm-legend-cell[data-level="3"] { background: var(--hm-level-3); }
 .hm-legend-cell[data-level="4"] { background: var(--hm-level-4); }
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .hm-cell {
+    transition: none;
+  }
+  .hm-cell:hover {
+    transform: none;
+  }
+  .hm-stat-num {
+    transition: none;
+  }
+  .hm-tooltip {
+    transition: none;
+  }
+  .hm-nav-btn {
+    transition: none;
+  }
+}
 
 /* Loading / noscript fallback */
 #writing-heatmap .hm-loading {
