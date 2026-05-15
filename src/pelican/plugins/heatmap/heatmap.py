@@ -13,6 +13,7 @@ output format:
     },
     "total": 42,
     "streak": 5,
+    "weekly_streak": 3,
     "most_active_day": "2025-03-01"
   }
 """
@@ -77,11 +78,13 @@ def generate_heatmap(generators):
     total = sum(v["count"] for v in data.values())
     most_active_day = max(data, key=lambda d: data[d]["count"]) if data else ""
     streak = _calculate_streak(data)
+    weekly_streak = _calculate_weekly_streak(data)
 
     payload = {
         "data": data,
         "total": total,
         "streak": streak,
+        "weekly_streak": weekly_streak,
         "most_active_day": most_active_day,
     }
 
@@ -107,6 +110,31 @@ def _calculate_streak(data: dict) -> int:
             current -= timedelta(days=1)
         else:
             break
+
+    return streak
+
+
+def _calculate_weekly_streak(data: dict) -> int:
+    today = date.today()
+    streak = 0
+    # Monday of the current ISO week
+    week_start = today - timedelta(days=today.weekday())
+
+    def week_has_posts(ws: date) -> bool:
+        for i in range(7):
+            day = ws + timedelta(days=i)
+            if day > today:
+                break
+            if day.strftime("%Y-%m-%d") in data:
+                return True
+        return False
+
+    if not week_has_posts(week_start):
+        week_start -= timedelta(weeks=1)
+
+    while week_has_posts(week_start):
+        streak += 1
+        week_start -= timedelta(weeks=1)
 
     return streak
 

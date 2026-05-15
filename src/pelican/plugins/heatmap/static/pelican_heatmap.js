@@ -27,6 +27,7 @@
       posts: "posts",
       alltime: "all\u2011time\nposts", // \u2011 = non-breaking hyphen
       streak: "day\nstreak",
+      week_streak: "week\nstreak",
       prev_year: "Previous year",
       next_year: "Next year",
     },
@@ -52,6 +53,7 @@
       posts: "篇文章",
       alltime: "所有\n文章",
       streak: "天\n連續發文",
+      week_streak: "週\n連續發文",
       prev_year: "前一年",
       next_year: "後一年",
     },
@@ -83,6 +85,10 @@
       <div class="hm-stat-card">
         <span class="hm-stat-num" id="hm-stat-streak">—</span>
         <span class="hm-stat-label">${L.streak.replace("\n", "<br>")}</span>
+      </div>
+      <div class="hm-stat-card">
+        <span class="hm-stat-num" id="hm-stat-week-streak">—</span>
+        <span class="hm-stat-label">${L.week_streak.replace("\n", "<br>")}</span>
       </div>
     </div>
 
@@ -116,12 +122,14 @@
   // ── Load JSON ─────────────────────────────────────────────
   let heatmapData = {},
     allTotal = 0,
-    streak = 0;
+    streak = 0,
+    weekStreak = 0;
   try {
     const json = await fetch(dataUrl).then((r) => r.json());
     heatmapData = json.data ?? {};
     allTotal = json.total ?? 0;
     streak = json.streak ?? 0;
+    weekStreak = json.weekly_streak ?? 0;
   } catch (e) {
     console.warn("[writing_heatmap] failed to load " + dataUrl, e);
   }
@@ -129,6 +137,7 @@
   // ── Static stats ──────────────────────────────────────────
   document.getElementById("hm-stat-alltime").textContent = allTotal;
   document.getElementById("hm-stat-streak").textContent = streak;
+  document.getElementById("hm-stat-week-streak").textContent = weekStreak;
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
