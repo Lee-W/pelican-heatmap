@@ -57,7 +57,13 @@ class TestJSONStructure:
     def test_top_level_keys(self):
         articles = [make_article("A", "/a/", "2025-01-01")]
         out = run_generate(articles)
-        assert set(out.keys()) == {"data", "total", "streak", "weekly_streak", "most_active_day"}
+        assert set(out.keys()) == {
+            "data",
+            "total",
+            "streak",
+            "weekly_streak",
+            "most_active_day",
+        }
 
     def test_data_entry_keys(self):
         articles = [make_article("A", "/a/", "2025-01-01")]

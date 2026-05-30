@@ -19,7 +19,7 @@ output format:
 """
 
 import json
-import os
+import logging
 import shutil
 from collections import defaultdict
 from datetime import date, timedelta
@@ -29,14 +29,19 @@ from pelican.generators import ArticlesGenerator
 
 from pelican import signals
 
+logger = logging.getLogger(__name__)
+
 STATIC_DIR = Path(__file__).parent / "static"
+
+
+def _get_article_generator(generators):
+    """Return the first ArticlesGenerator found in generators, or None."""
+    return next((g for g in generators if isinstance(g, ArticlesGenerator)), None)
 
 
 def copy_static(generators):
     """Copy CSS and JS to output/static/heatmap/."""
-    article_generator = next(
-        (g for g in generators if isinstance(g, ArticlesGenerator)), None
-    )
+    article_generator = _get_article_generator(generators)
     if article_generator is None:
         return
 
@@ -47,19 +52,17 @@ def copy_static(generators):
         if f.suffix in (".css", ".js"):
             shutil.copy2(f, dest / f.name)
 
-    print(f"[writing_heatmap] copied static assets to {dest}")
+    logger.debug("[writing_heatmap] copied static assets to %s", dest)
 
 
 def generate_heatmap(generators):
-    article_generator = next(
-        (g for g in generators if isinstance(g, ArticlesGenerator)), None
-    )
+    article_generator = _get_article_generator(generators)
     if article_generator is None:
         return
 
     date_articles = defaultdict(list)
     for article in article_generator.articles:
-        day_str = article.date.strftime("%Y-%m-%d")
+        day_str = article.date.date().isoformat()
         date_articles[day_str].append(
             {
                 "title": article.title,
@@ -88,23 +91,24 @@ def generate_heatmap(generators):
         "most_active_day": most_active_day,
     }
 
-    os.makedirs(article_generator.output_path, exist_ok=True)
-    output_path = os.path.join(article_generator.output_path, "writing-heatmap.json")
-    with open(output_path, "w", encoding="utf-8") as f:
-        json.dump(payload, f, ensure_ascii=False, indent=2)
+    output_path = Path(article_generator.output_path)
+    output_path.mkdir(parents=True, exist_ok=True)
+    (output_path / "writing-heatmap.json").write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
 
-    print(f"[writing_heatmap] generated writing-heatmap.json ({total} articles)")
+    logger.info("[writing_heatmap] generated writing-heatmap.json (%d articles)", total)
 
 
-def _calculate_streak(data: dict) -> int:
+def _calculate_streak(data: dict[str, dict]) -> int:
     today = date.today()
     streak = 0
 
-    start = today if today.strftime("%Y-%m-%d") in data else today - timedelta(days=1)
+    start = today if today.isoformat() in data else today - timedelta(days=1)
     current = start
 
     while True:
-        key = current.strftime("%Y-%m-%d")
+        key = current.isoformat()
         if key in data:
             streak += 1
             current -= timedelta(days=1)
@@ -114,7 +118,7 @@ def _calculate_streak(data: dict) -> int:
     return streak
 
 
-def _calculate_weekly_streak(data: dict) -> int:
+def _calculate_weekly_streak(data: dict[str, dict]) -> int:
     today = date.today()
     streak = 0
     # Monday of the current ISO week
@@ -125,7 +129,7 @@ def _calculate_weekly_streak(data: dict) -> int:
             day = ws + timedelta(days=i)
             if day > today:
                 break
-            if day.strftime("%Y-%m-%d") in data:
+            if day.isoformat() in data:
                 return True
         return False
 
