@@ -1,3 +1,9 @@
+## 0.4.1 (2026-05-30)
+
+### Fix
+
+- **config**: fix misconfiguration, align ci versions, and add ruff tooling
+
 ## 0.4.0 (2026-05-15)
 
 ### Feat
