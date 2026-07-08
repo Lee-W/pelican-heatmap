@@ -122,33 +122,76 @@
   // ── Load JSON ─────────────────────────────────────────────
   let heatmapData = {},
     allTotal = 0,
-    streak = 0,
     weekStreak = 0;
   try {
     const json = await fetch(dataUrl).then((r) => r.json());
     heatmapData = json.data ?? {};
     allTotal = json.total ?? 0;
-    streak = json.streak ?? 0;
-    weekStreak = json.weekly_streak ?? 0;
   } catch (e) {
     console.warn("[writing_heatmap] failed to load " + dataUrl, e);
   }
-
-  // ── Static stats ──────────────────────────────────────────
-  document.getElementById("hm-stat-alltime").textContent = allTotal;
-  document.getElementById("hm-stat-streak").textContent = streak;
-  document.getElementById("hm-stat-week-streak").textContent = weekStreak;
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const allKeys = Object.keys(heatmapData).sort();
   const earliestDate = allKeys.length
     ? new Date(allKeys[0] + "T00:00:00")
-    : new Date(today);
+      : new Date(today);
   const globalMax = Math.max(
     ...Object.values(heatmapData).map((v) => v.count),
     1,
   );
+
+  function dateKey(d) {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  }
+
+  function hasPosts(d) {
+    return Boolean(heatmapData[dateKey(d)]);
+  }
+
+  function calculateStreak() {
+    let streak = 0;
+    const current = new Date(today);
+    if (!hasPosts(current)) current.setDate(current.getDate() - 1);
+
+    while (hasPosts(current)) {
+      streak++;
+      current.setDate(current.getDate() - 1);
+    }
+    return streak;
+  }
+
+  function calculateWeeklyStreak() {
+    let streak = 0;
+    const weekStart = new Date(today);
+    weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7));
+
+    function weekHasPosts(start) {
+      const day = new Date(start);
+      for (let i = 0; i < 7; i++) {
+        if (day > today) break;
+        if (hasPosts(day)) return true;
+        day.setDate(day.getDate() + 1);
+      }
+      return false;
+    }
+
+    if (!weekHasPosts(weekStart)) weekStart.setDate(weekStart.getDate() - 7);
+
+    while (weekHasPosts(weekStart)) {
+      streak++;
+      weekStart.setDate(weekStart.getDate() - 7);
+    }
+    return streak;
+  }
+
+  weekStreak = calculateWeeklyStreak();
+
+  // ── Static stats ──────────────────────────────────────────
+  document.getElementById("hm-stat-alltime").textContent = allTotal;
+  document.getElementById("hm-stat-streak").textContent = calculateStreak();
+  document.getElementById("hm-stat-week-streak").textContent = weekStreak;
 
   function getLevel(c) {
     if (!c) return 0;
@@ -231,7 +274,7 @@
       }
 
       // Use local date to avoid UTC offset shifting the day
-      const key = `${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, "0")}-${String(cur.getDate()).padStart(2, "0")}`;
+      const key = dateKey(cur);
       const entry = heatmapData[key];
       const count = entry ? entry.count : 0;
       const isFuture = cur > today;

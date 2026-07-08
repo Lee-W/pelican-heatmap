@@ -43,20 +43,20 @@ PLUGINS = ["pelican.plugins.heatmap"]
 
 ### 2. Add the widget to a page
 
-The plugin copies `pelican_heatmap.css` and `pelican_heatmap.js` to `output/static/` automatically at build time. Add these three lines wherever you want the heatmap to appear — a dedicated page, your about page, or a sidebar:
+The plugin copies `pelican_heatmap.css` and `pelican_heatmap.js` to `output/static/heatmap/` automatically at build time. Add these three lines wherever you want the heatmap to appear — a dedicated page, your about page, or a sidebar:
 
 ```html
-<link rel="stylesheet" href="/static/pelican_heatmap.css">
+<link rel="stylesheet" href="/static/heatmap/pelican_heatmap.css">
 <div id="writing-heatmap"></div>
-<script src="/static/pelican_heatmap.js" defer></script>
+<script src="/static/heatmap/pelican_heatmap.js" defer></script>
 ```
 
 In a Jinja2 template:
 
 ```html
-<link rel="stylesheet" href="{{ SITEURL }}/static/pelican_heatmap.css">
+<link rel="stylesheet" href="{{ SITEURL }}/static/heatmap/pelican_heatmap.css">
 <div id="writing-heatmap"></div>
-<script src="{{ SITEURL }}/static/pelican_heatmap.js" defer></script>
+<script src="{{ SITEURL }}/static/heatmap/pelican_heatmap.js" defer></script>
 ```
 
 ### 3. Build
@@ -221,12 +221,11 @@ The plugin writes `output/writing-heatmap.json` with the following shape:
     }
   },
   "total": 260,
-  "streak": 5,
   "most_active_day": "2025-07-04"
 }
 ```
 
-You can consume this file independently of the widget if you want to build your own visualization.
+The bundled widget calculates the current day streak and current week streak in the browser from `data`, using the visitor's current date. This keeps those live stats accurate even when your site is static and the JSON file was generated earlier. You can consume this file independently of the widget if you want to build your own visualization.
 
 ## Requirements
 

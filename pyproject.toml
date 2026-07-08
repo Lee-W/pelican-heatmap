@@ -52,7 +52,7 @@ Repository = "https://github.com/Lee-W/pelican-heatmap"
 Issues = "https://github.com/Lee-W/pelican-heatmap/issues"
 
 [build-system]
-requires = ["uv_build >= 0.10.3, <0.11.0"]
+requires = ["uv_build >= 0.11.25, <0.12.0"]
 build-backend = "uv_build"
 
 [tool.uv.build-backend]
@@ -64,10 +64,12 @@ target-version = "py310"
 line-length = 88
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "UP"]
+select = ["E", "F", "I", "W", "UP", "SIM", "B", "RUF"]
 
 [tool.mypy]
 files = ["src", "tests"]
+explicit_package_bases = true
+mypy_path = "src"
 disallow_untyped_decorators = true
 disallow_subclassing_any = true
 warn_return_any = true

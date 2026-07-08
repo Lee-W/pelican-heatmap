@@ -12,8 +12,6 @@ output format:
       ...
     },
     "total": 42,
-    "streak": 5,
-    "weekly_streak": 3,
     "most_active_day": "2025-03-01"
   }
 """
@@ -22,16 +20,26 @@ import json
 import logging
 import shutil
 from collections import defaultdict
-from datetime import date, timedelta
 from pathlib import Path
+from typing import TypedDict
 
 from pelican.generators import ArticlesGenerator
 
-from pelican import signals
+from pelican import signals  # type: ignore[attr-defined]
 
 logger = logging.getLogger(__name__)
 
 STATIC_DIR = Path(__file__).parent / "static"
+
+
+class ArticleEntry(TypedDict):
+    title: str
+    url: str
+
+
+class DayEntry(TypedDict):
+    count: int
+    articles: list[ArticleEntry]
 
 
 def _get_article_generator(generators):
@@ -39,7 +47,12 @@ def _get_article_generator(generators):
     return next((g for g in generators if isinstance(g, ArticlesGenerator)), None)
 
 
-def copy_static(generators):
+def _article_url(article_url: str, siteurl: str) -> str:
+    path = "/" + article_url.lstrip("/")
+    return f"{siteurl.rstrip('/')}{path}" if siteurl else path
+
+
+def copy_static(generators) -> None:
     """Copy CSS and JS to output/static/heatmap/."""
     article_generator = _get_article_generator(generators)
     if article_generator is None:
@@ -55,22 +68,23 @@ def copy_static(generators):
     logger.debug("[writing_heatmap] copied static assets to %s", dest)
 
 
-def generate_heatmap(generators):
+def generate_heatmap(generators) -> None:
     article_generator = _get_article_generator(generators)
     if article_generator is None:
         return
 
-    date_articles = defaultdict(list)
+    date_articles: defaultdict[str, list[ArticleEntry]] = defaultdict(list)
+    siteurl = str(article_generator.settings.get("SITEURL", ""))
     for article in article_generator.articles:
         day_str = article.date.date().isoformat()
         date_articles[day_str].append(
             {
                 "title": article.title,
-                "url": "/" + article.url,
+                "url": _article_url(article.url, siteurl),
             }
         )
 
-    data = {
+    data: dict[str, DayEntry] = {
         day: {
             "count": len(articles),
             "articles": articles,
@@ -80,14 +94,10 @@ def generate_heatmap(generators):
 
     total = sum(v["count"] for v in data.values())
     most_active_day = max(data, key=lambda d: data[d]["count"]) if data else ""
-    streak = _calculate_streak(data)
-    weekly_streak = _calculate_weekly_streak(data)
 
     payload = {
         "data": data,
         "total": total,
-        "streak": streak,
-        "weekly_streak": weekly_streak,
         "most_active_day": most_active_day,
     }
 
@@ -100,49 +110,6 @@ def generate_heatmap(generators):
     logger.info("[writing_heatmap] generated writing-heatmap.json (%d articles)", total)
 
 
-def _calculate_streak(data: dict[str, dict]) -> int:
-    today = date.today()
-    streak = 0
-
-    start = today if today.isoformat() in data else today - timedelta(days=1)
-    current = start
-
-    while True:
-        key = current.isoformat()
-        if key in data:
-            streak += 1
-            current -= timedelta(days=1)
-        else:
-            break
-
-    return streak
-
-
-def _calculate_weekly_streak(data: dict[str, dict]) -> int:
-    today = date.today()
-    streak = 0
-    # Monday of the current ISO week
-    week_start = today - timedelta(days=today.weekday())
-
-    def week_has_posts(ws: date) -> bool:
-        for i in range(7):
-            day = ws + timedelta(days=i)
-            if day > today:
-                break
-            if day.isoformat() in data:
-                return True
-        return False
-
-    if not week_has_posts(week_start):
-        week_start -= timedelta(weeks=1)
-
-    while week_has_posts(week_start):
-        streak += 1
-        week_start -= timedelta(weeks=1)
-
-    return streak
-
-
-def register():
+def register() -> None:
     signals.all_generators_finalized.connect(generate_heatmap)
     signals.all_generators_finalized.connect(copy_static)

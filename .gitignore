@@ -5,7 +5,14 @@ build/
 dist/
 wheels/
 *.egg-info
+.coverage
+coverage.xml
+junit.xml
 
 # Virtual environments
 .venv
-junit.xml
+
+# Tool caches
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/

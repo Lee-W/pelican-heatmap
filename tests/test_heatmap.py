@@ -1,14 +1,15 @@
 import json
 import os
 import tempfile
+from collections.abc import Sequence
 from datetime import date
+from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import patch
+from typing import Any, cast
 
 # Import the functions we want to test directly (no Pelican runtime needed)
 from pelican.plugins.heatmap.heatmap import (
-    _calculate_streak,
-    _calculate_weekly_streak,
+    copy_static,
     generate_heatmap,
 )
 
@@ -25,29 +26,34 @@ def make_article(title: str, url: str, date_str: str):
     return SimpleNamespace(title=title, url=url.lstrip("/"), date=dt)
 
 
-def make_generators(articles: list, output_path: str):
+def make_generators(
+    articles: Sequence[Any], output_path: str, settings: dict[str, Any] | None = None
+) -> list[Any]:
     """Return a minimal mock generators list (as all_generators_finalized provides)."""
     from pelican.generators import ArticlesGenerator
 
     # Subclass to avoid ArticlesGenerator's heavy __init__
-    class MockArticlesGenerator(ArticlesGenerator):
-        def __init__(self):
+    class MockArticlesGenerator(ArticlesGenerator):  # type: ignore[misc]
+        def __init__(self) -> None:
             pass
 
     g = MockArticlesGenerator()
     g.articles = articles
     g.output_path = output_path
+    g.settings = settings or {}
     return [g]
 
 
-def run_generate(articles: list) -> dict:
+def run_generate(
+    articles: Sequence[Any], settings: dict[str, Any] | None = None
+) -> dict:
     """Run generate_heatmap and return the parsed JSON output."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        generators = make_generators(articles, tmpdir)
+        generators = make_generators(articles, tmpdir, settings)
         generate_heatmap(generators)
         json_path = os.path.join(tmpdir, "writing-heatmap.json")
         with open(json_path) as f:
-            return json.load(f)
+            return cast(dict, json.load(f))
 
 
 # ── JSON output: structure ────────────────────────────────────────────────────
@@ -60,8 +66,6 @@ class TestJSONStructure:
         assert set(out.keys()) == {
             "data",
             "total",
-            "streak",
-            "weekly_streak",
             "most_active_day",
         }
 
@@ -86,7 +90,6 @@ class TestJSONStructure:
         out = run_generate([])
         assert out["total"] == 0
         assert out["data"] == {}
-        assert out["streak"] == 0
 
     def test_output_dir_created_if_missing(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -157,177 +160,28 @@ class TestCounts:
         assert titles == ["First", "Second"]
 
 
-# ── Streak calculation ────────────────────────────────────────────────────────
+# ── Paths and static assets ───────────────────────────────────────────────────
 
 
-class TestStreak:
-    """
-    _calculate_streak() is tested in isolation with a fixed 'today' via mock,
-    so results are deterministic regardless of when the tests run.
-    """
+class TestPathsAndAssets:
+    def test_article_url_uses_siteurl_subpath(self):
+        articles = [make_article("A", "posts/a.html", "2025-01-01")]
+        out = run_generate(articles, {"SITEURL": "/blog"})
+        assert out["data"]["2025-01-01"]["articles"][0]["url"] == "/blog/posts/a.html"
 
-    def _run(self, data: dict, today_str: str) -> int:
-        today = date.fromisoformat(today_str)
-        with patch("pelican.plugins.heatmap.heatmap.date") as mock_date:
-            mock_date.today.return_value = today
-            mock_date.fromisoformat = date.fromisoformat
-            return _calculate_streak(data)
+    def test_article_url_uses_absolute_siteurl(self):
+        articles = [make_article("A", "/posts/a.html", "2025-01-01")]
+        out = run_generate(articles, {"SITEURL": "https://example.com/blog/"})
+        assert (
+            out["data"]["2025-01-01"]["articles"][0]["url"]
+            == "https://example.com/blog/posts/a.html"
+        )
 
-    def test_no_posts_streak_is_zero(self):
-        assert self._run({}, "2025-06-10") == 0
+    def test_copy_static_writes_assets_to_documented_directory(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            generators = make_generators([], tmpdir)
+            copy_static(generators)
 
-    def test_only_today(self):
-        data = {"2025-06-10": {"count": 1, "articles": []}}
-        assert self._run(data, "2025-06-10") == 1
-
-    def test_only_yesterday(self):
-        data = {"2025-06-09": {"count": 1, "articles": []}}
-        assert self._run(data, "2025-06-10") == 1
-
-    def test_today_and_yesterday(self):
-        data = {
-            "2025-06-09": {"count": 1, "articles": []},
-            "2025-06-10": {"count": 1, "articles": []},
-        }
-        assert self._run(data, "2025-06-10") == 2
-
-    def test_consecutive_days_not_including_today(self):
-        data = {
-            "2025-06-07": {"count": 1, "articles": []},
-            "2025-06-08": {"count": 1, "articles": []},
-            "2025-06-09": {"count": 1, "articles": []},
-        }
-        assert self._run(data, "2025-06-10") == 3
-
-    def test_streak_broken_by_gap(self):
-        data = {
-            "2025-06-05": {"count": 1, "articles": []},
-            # gap on 06-06
-            "2025-06-07": {"count": 1, "articles": []},
-            "2025-06-08": {"count": 1, "articles": []},
-            "2025-06-09": {"count": 1, "articles": []},
-        }
-        # streak from yesterday backward: 09, 08, 07 → 3 (stops at gap)
-        assert self._run(data, "2025-06-10") == 3
-
-    def test_old_posts_dont_count_if_gap_before_yesterday(self):
-        data = {
-            "2025-01-01": {"count": 1, "articles": []},
-            "2025-01-02": {"count": 1, "articles": []},
-        }
-        # today is 2025-06-10, yesterday is 06-09 — no post → streak 0
-        assert self._run(data, "2025-06-10") == 0
-
-    def test_streak_across_month_boundary(self):
-        data = {
-            "2025-05-30": {"count": 1, "articles": []},
-            "2025-05-31": {"count": 1, "articles": []},
-            "2025-06-01": {"count": 1, "articles": []},
-        }
-        assert self._run(data, "2025-06-01") == 3
-
-    def test_streak_across_year_boundary(self):
-        data = {
-            "2024-12-30": {"count": 1, "articles": []},
-            "2024-12-31": {"count": 1, "articles": []},
-            "2025-01-01": {"count": 1, "articles": []},
-        }
-        assert self._run(data, "2025-01-01") == 3
-
-    def test_today_not_written_uses_yesterday_as_start(self):
-        # yesterday and day before — no post today
-        data = {
-            "2025-06-08": {"count": 1, "articles": []},
-            "2025-06-09": {"count": 1, "articles": []},
-        }
-        assert self._run(data, "2025-06-10") == 2
-
-    def test_single_post_two_days_ago_is_zero(self):
-        data = {"2025-06-08": {"count": 1, "articles": []}}
-        # yesterday (06-09) is missing → streak breaks immediately
-        assert self._run(data, "2025-06-10") == 0
-
-
-# ── Weekly streak calculation ──────────────────────────────────────────────────
-
-
-class TestWeeklyStreak:
-    """
-    _calculate_weekly_streak() tested with a fixed 'today' via mock.
-    Weeks start on Monday (ISO). 2025-06-09 is a Monday.
-    """
-
-    def _run(self, data: dict, today_str: str) -> int:
-        today = date.fromisoformat(today_str)
-        with patch("pelican.plugins.heatmap.heatmap.date") as mock_date:
-            mock_date.today.return_value = today
-            mock_date.fromisoformat = date.fromisoformat
-            return _calculate_weekly_streak(data)
-
-    def test_no_posts_is_zero(self):
-        assert self._run({}, "2025-06-11") == 0
-
-    def test_post_this_week(self):
-        # today is Wed 2025-06-11, week is Mon 06-09 to Sun 06-15
-        data = {"2025-06-10": {"count": 1, "articles": []}}
-        assert self._run(data, "2025-06-11") == 1
-
-    def test_post_only_last_week(self):
-        # today is Wed 2025-06-11, no post this week
-        data = {"2025-06-04": {"count": 1, "articles": []}}
-        assert self._run(data, "2025-06-11") == 1
-
-    def test_two_consecutive_weeks(self):
-        data = {
-            "2025-06-04": {"count": 1, "articles": []},  # last week
-            "2025-06-10": {"count": 1, "articles": []},  # this week
-        }
-        assert self._run(data, "2025-06-11") == 2
-
-    def test_streak_broken_by_gap_week(self):
-        # this week ✓, two weeks ago ✓, last week ✗ → streak = 1
-        data = {
-            "2025-05-28": {"count": 1, "articles": []},  # two weeks ago
-            "2025-06-10": {"count": 1, "articles": []},  # this week
-        }
-        assert self._run(data, "2025-06-11") == 1
-
-    def test_old_posts_dont_count_if_gap(self):
-        # posts in January, nothing recent
-        data = {
-            "2025-01-06": {"count": 1, "articles": []},
-            "2025-01-07": {"count": 1, "articles": []},
-        }
-        assert self._run(data, "2025-06-11") == 0
-
-    def test_streak_across_month_boundary(self):
-        # today is Mon 2025-06-02; last week was Mon 05-26 to Sun 06-01
-        data = {
-            "2025-05-28": {"count": 1, "articles": []},  # last week
-            "2025-06-02": {"count": 1, "articles": []},  # this week (today)
-        }
-        assert self._run(data, "2025-06-02") == 2
-
-    def test_streak_across_year_boundary(self):
-        # today is Wed 2025-01-01; current week starts Mon 2024-12-30
-        # this week (12-30 to 01-01): 01-01 ✓
-        # last week (12-23 to 12-29): 12-25 ✓
-        # two weeks ago: no posts → stops
-        data = {
-            "2024-12-25": {"count": 1, "articles": []},  # last week
-            "2025-01-01": {"count": 1, "articles": []},  # this week
-        }
-        assert self._run(data, "2025-01-01") == 2
-
-    def test_post_on_monday_start_of_week(self):
-        # today is Monday 2025-06-09 itself
-        data = {"2025-06-09": {"count": 1, "articles": []}}
-        assert self._run(data, "2025-06-09") == 1
-
-    def test_three_consecutive_weeks(self):
-        data = {
-            "2025-05-28": {"count": 1, "articles": []},  # two weeks ago
-            "2025-06-04": {"count": 1, "articles": []},  # last week
-            "2025-06-10": {"count": 1, "articles": []},  # this week
-        }
-        assert self._run(data, "2025-06-11") == 3
+            output_static = Path(tmpdir) / "static" / "heatmap"
+            assert (output_static / "pelican_heatmap.css").is_file()
+            assert (output_static / "pelican_heatmap.js").is_file()
