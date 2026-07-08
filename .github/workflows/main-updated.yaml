@@ -9,6 +9,8 @@ jobs:
   bump-version:
     if: "!startsWith(github.event.head_commit.message, 'bump:')"
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     name: "Bump version and create changelog with commitizen"
     steps:
       - name: Check out
@@ -31,3 +33,4 @@ jobs:
         with:
           tag: ${{ steps.cz.outputs.version }}
           skipIfReleaseExists: true
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
