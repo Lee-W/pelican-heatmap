@@ -1,3 +1,9 @@
+## 0.6.0 (2026-08-10)
+
+### Feat
+
+- make week start configurable
+
 ## 0.5.1 (2026-07-08)
 
 ### Fix
