@@ -26,6 +26,7 @@
       no_posts: "No posts",
       posts: "posts",
       alltime: "all\u2011time\nposts", // \u2011 = non-breaking hyphen
+      years: "years\nwriting",
       streak: "day\nstreak",
       week_streak: "week\nstreak",
       prev_year: "Previous year",
@@ -52,6 +53,7 @@
       no_posts: "沒有文章",
       posts: "篇文章",
       alltime: "所有\n文章",
+      years: "寫作\n年資",
       streak: "天\n連續發文",
       week_streak: "週\n連續發文",
       prev_year: "前一年",
@@ -111,6 +113,10 @@
         <span class="hm-stat-label">${L.alltime.replace("\n", "<br>")}</span>
       </div>
       <div class="hm-stat-card">
+        <span class="hm-stat-num" id="hm-stat-years">—</span>
+        <span class="hm-stat-label">${L.years.replace("\n", "<br>")}</span>
+      </div>
+      <div class="hm-stat-card">
         <span class="hm-stat-num" id="hm-stat-streak">—</span>
         <span class="hm-stat-label">${L.streak.replace("\n", "<br>")}</span>
       </div>
@@ -166,6 +172,28 @@
     return Boolean(heatmapData[dateKey(d)]);
   }
 
+  // NOT the same code path as (and not guaranteed to agree with) the
+  // sibling `writing_years` field computed independently in
+  // `pelican-stat`'s `ArticleWordCountAggregator.compute()`
+  // (`wordcount.py:121-127`, sibling plugin, same repo family). This
+  // function: calendar-day granularity (`Math.floor`, whole days only),
+  // the *reader's browser* local timezone (`Date` objects here are built
+  // from whatever timezone the browser is running in, not the site's
+  // configured `TIMEZONE`), `toFixed()` rounding (returns a string, and
+  // rounds differently from Python's banker's rounding). `pelican-stat`'s
+  // version instead uses exact timestamps, integer-truncated `.days`, the
+  // source article's own tzinfo (site `TIMEZONE`, e.g. Asia/Taipei), and
+  // Python `round()`. Confirmed via a real Node repro against this site's
+  // actual earliest-article date: both happened to round to `12.7` at
+  // review time -- a coincidence for that specific date, not a guarantee
+  // for any other one. See `wordcount.py`'s "Known limitations" comment
+  // for the full write-up and the current (harmless, because nothing
+  // renders both numbers side-by-side today) risk assessment.
+  function calculateYearsWriting() {
+    const days = Math.floor((today - earliestDate) / 86400000);
+    return (days / 365.25).toFixed(1);
+  }
+
   function calculateStreak() {
     let streak = 0;
     const current = new Date(today);
@@ -206,6 +234,7 @@
 
   // ── Static stats ──────────────────────────────────────────
   document.getElementById("hm-stat-alltime").textContent = allTotal;
+  document.getElementById("hm-stat-years").textContent = calculateYearsWriting();
   document.getElementById("hm-stat-streak").textContent = calculateStreak();
   document.getElementById("hm-stat-week-streak").textContent = weekStreak;
 

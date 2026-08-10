@@ -9,6 +9,7 @@ from typing import Any, cast
 
 # Import the functions we want to test directly (no Pelican runtime needed)
 from pelican.plugins.heatmap.heatmap import (
+    _reset_accumulator_for_testing,
     copy_static,
     generate_heatmap,
 )
@@ -16,14 +17,25 @@ from pelican.plugins.heatmap.heatmap import (
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 
-def make_article(title: str, url: str, date_str: str):
-    """Return a minimal mock article object."""
+def make_article(title: str, url: str, date_str: str, source_path: str | None = None):
+    """Return a minimal mock article object.
+
+    `source_path` defaults to `url` (unique per article in nearly every
+    test); pass an explicit, identical `source_path` across two calls when a
+    test wants to simulate "the same article appears in more than one
+    round" (e.g. a crashed-then-rerun `livereload` accumulator).
+    """
     d = date.fromisoformat(date_str)
     # Pelican article.date is a datetime; strftime must work, so we use a real date
     from datetime import datetime
 
     dt = datetime(d.year, d.month, d.day)
-    return SimpleNamespace(title=title, url=url.lstrip("/"), date=dt)
+    return SimpleNamespace(
+        title=title,
+        url=url.lstrip("/"),
+        date=dt,
+        source_path=source_path if source_path is not None else url,
+    )
 
 
 def make_generators(
@@ -44,16 +56,28 @@ def make_generators(
     return [g]
 
 
+def _read_json(output_path: str) -> dict:
+    json_path = os.path.join(output_path, "writing-heatmap.json")
+    with open(json_path) as f:
+        return cast(dict, json.load(f))
+
+
 def run_generate(
     articles: Sequence[Any], settings: dict[str, Any] | None = None
 ) -> dict:
-    """Run generate_heatmap and return the parsed JSON output."""
+    """Reset the accumulator, run a single fresh round, return the parsed JSON output.
+
+    Resetting first keeps every pre-existing single-round test isolated
+    from cross-round accumulation state left behind by other tests in this
+    file (pytest-xdist runs this file's tests in one worker process via
+    `--dist=loadfile`, so module-level state persists across tests unless
+    explicitly cleared).
+    """
+    _reset_accumulator_for_testing()
     with tempfile.TemporaryDirectory() as tmpdir:
         generators = make_generators(articles, tmpdir, settings)
         generate_heatmap(generators)
-        json_path = os.path.join(tmpdir, "writing-heatmap.json")
-        with open(json_path) as f:
-            return cast(dict, json.load(f))
+        return _read_json(tmpdir)
 
 
 # ── JSON output: structure ────────────────────────────────────────────────────
@@ -213,3 +237,105 @@ class TestPathsAndAssets:
             assert "weekStart.getDate() - daysFromWeekStart(weekStart)" in script
             assert "6 - daysFromWeekStart(base)" in script
             assert "cur.getDay() === weekStartDay" in script
+
+
+# ── Cross-round accumulation (the 298-vs-322 bug) ───────────────────────────
+
+
+class TestCrossRoundAccumulation:
+    def test_two_rounds_accumulate_to_combined_total(self):
+        """Simulates the primary (zh) round then the nested (en) subsite round."""
+        _reset_accumulator_for_testing()
+        with (
+            tempfile.TemporaryDirectory() as primary_dir,
+            tempfile.TemporaryDirectory() as nested_dir,
+        ):
+            zh_articles = [
+                make_article("Zh A", "/posts/zh-a/", "2025-01-01"),
+                make_article("Zh B", "/posts/zh-b/", "2025-01-02"),
+            ]
+            en_articles = [
+                make_article("En A", "/posts/en-a/", "2025-01-03"),
+            ]
+
+            generate_heatmap(
+                make_generators(
+                    zh_articles, primary_dir, {"SITEURL": "https://blog.example.com"}
+                )
+            )
+            generate_heatmap(
+                make_generators(
+                    en_articles, nested_dir, {"SITEURL": "https://blog.example.com/en"}
+                )
+            )
+
+            primary_out = _read_json(primary_dir)
+            nested_out = _read_json(nested_dir)
+
+            assert primary_out["total"] == 3
+            assert nested_out["total"] == 3
+            assert primary_out == nested_out
+
+    def test_repeated_source_path_does_not_inflate_total(self):
+        """Simulates a crashed livereload rebuild that left the accumulator un-reset."""
+        _reset_accumulator_for_testing()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            article = make_article(
+                "A", "/posts/a/", "2025-01-01", source_path="content/a.md"
+            )
+
+            generate_heatmap(make_generators([article], tmpdir))
+            # Same source_path reappears in a second round (e.g. leftover
+            # accumulator state after a crashed rebuild) -- must not double count.
+            generate_heatmap(make_generators([article], tmpdir))
+
+            out = _read_json(tmpdir)
+            assert out["total"] == 1
+            assert out["data"]["2025-01-01"]["count"] == 1
+
+    def test_each_round_url_uses_its_own_siteurl(self):
+        """zh articles link to the primary site; en articles link under /en/."""
+        _reset_accumulator_for_testing()
+        with (
+            tempfile.TemporaryDirectory() as primary_dir,
+            tempfile.TemporaryDirectory() as nested_dir,
+        ):
+            zh_article = make_article("Zh A", "posts/zh-a.html", "2025-01-01")
+            en_article = make_article("En A", "posts/en-a.html", "2025-01-02")
+
+            generate_heatmap(
+                make_generators(
+                    [zh_article], primary_dir, {"SITEURL": "https://blog.example.com"}
+                )
+            )
+            generate_heatmap(
+                make_generators(
+                    [en_article], nested_dir, {"SITEURL": "https://blog.example.com/en"}
+                )
+            )
+
+            merged = _read_json(
+                nested_dir
+            )  # both output paths hold identical merged data
+            zh_url = merged["data"]["2025-01-01"]["articles"][0]["url"]
+            en_url = merged["data"]["2025-01-02"]["articles"][0]["url"]
+
+            assert zh_url == "https://blog.example.com/posts/zh-a.html"
+            assert "/en/" not in zh_url
+            assert en_url == "https://blog.example.com/en/posts/en-a.html"
+
+    def test_each_output_uses_its_own_week_start_setting(self):
+        _reset_accumulator_for_testing()
+        with (
+            tempfile.TemporaryDirectory() as primary_dir,
+            tempfile.TemporaryDirectory() as nested_dir,
+        ):
+            generate_heatmap(
+                make_generators([], primary_dir, {"HEATMAP_WEEK_START": 0})
+            )
+            generate_heatmap(
+                make_generators([], nested_dir, {"HEATMAP_WEEK_START": 1})
+            )
+
+            assert _read_json(primary_dir)["week_start"] == 0
+            assert _read_json(nested_dir)["week_start"] == 1
