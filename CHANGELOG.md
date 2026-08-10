@@ -1,3 +1,10 @@
+## 0.7.0 (2026-08-10)
+
+### Feat
+
+- add content shortcode for embedding heatmaps
+- show complete multilingual heatmap statistics
+
 ## 0.6.0 (2026-08-10)
 
 ### Feat
