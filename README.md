@@ -44,7 +44,23 @@ PLUGINS = ["pelican.plugins.heatmap"]
 
 ### 2. Add the widget to a page
 
-The plugin copies `pelican_heatmap.css` and `pelican_heatmap.js` to `output/static/heatmap/` automatically at build time. Add these three lines wherever you want the heatmap to appear — a dedicated page, your about page, or a sidebar:
+Add the shortcode on its own line in a Markdown or reStructuredText article or page:
+
+```text
+{% heatmap %}
+```
+
+In an HTML content file, wrap the shortcode in a paragraph:
+
+```html
+<p>{% heatmap %}</p>
+```
+
+The plugin replaces the parsed paragraph with the widget markup. The shortcode includes the stylesheet and script, and uses the current `SITEURL` for both assets and `writing-heatmap.json`. Only one heatmap can be rendered per page; if the shortcode appears more than once, the plugin renders the first and logs a warning.
+
+The plugin also copies `pelican_heatmap.css` and `pelican_heatmap.js` to `output/static/heatmap/` automatically at build time.
+
+To place the widget in a Jinja2 template or sidebar instead, add the markup manually:
 
 ```html
 <link rel="stylesheet" href="/static/heatmap/pelican_heatmap.css">
@@ -115,7 +131,7 @@ If you provide custom `days` through `window.HM_LOCALE`, keep the array in Sunda
 
 ## Custom data URL
 
-By default the widget fetches `/writing-heatmap.json`. Override this if your site is served from a subpath:
+The shortcode automatically sets the data URL from `SITEURL`. A manually embedded widget defaults to `/writing-heatmap.json`; override this if your site is served from a subpath:
 
 ```html
 <div id="writing-heatmap" data-src="/blog/writing-heatmap.json"></div>

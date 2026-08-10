@@ -11,6 +11,7 @@ from typing import Any, cast
 from pelican.plugins.heatmap.heatmap import (
     _reset_accumulator_for_testing,
     copy_static,
+    expand_heatmap_shortcode,
     generate_heatmap,
 )
 
@@ -78,6 +79,15 @@ def run_generate(
         generators = make_generators(articles, tmpdir, settings)
         generate_heatmap(generators)
         return _read_json(tmpdir)
+
+
+def make_content(content: str, siteurl: str = "") -> Any:
+    """Return the content attributes used by the shortcode signal receiver."""
+    return SimpleNamespace(
+        _content=content,
+        settings={"SITEURL": siteurl},
+        source_path="content/page.md",
+    )
 
 
 # ── JSON output: structure ────────────────────────────────────────────────────
@@ -239,6 +249,62 @@ class TestPathsAndAssets:
             assert "cur.getDay() === weekStartDay" in script
 
 
+# ── Content shortcode ────────────────────────────────────────────────────────
+
+
+class TestShortcode:
+    def test_standalone_shortcode_expands_complete_widget(self):
+        content = make_content("<p>Before</p>\n<p>{% heatmap %}</p>\n<p>After</p>")
+
+        expand_heatmap_shortcode(content)
+
+        assert '<link rel="stylesheet" href="/static/heatmap/' in content._content
+        assert '<div id="writing-heatmap"' in content._content
+        assert 'data-src="/writing-heatmap.json"' in content._content
+        assert (
+            '<script src="/static/heatmap/pelican_heatmap.js" defer>'
+            in content._content
+        )
+        assert "{% heatmap %}" not in content._content
+
+    def test_shortcode_uses_siteurl_for_assets_and_data(self):
+        content = make_content("<p>{% heatmap %}</p>", "https://example.com/blog/en/")
+
+        expand_heatmap_shortcode(content)
+
+        assert 'href="https://example.com/blog/en/static/heatmap/' in content._content
+        assert (
+            'data-src="https://example.com/blog/en/writing-heatmap.json"'
+            in content._content
+        )
+        assert 'src="https://example.com/blog/en/static/heatmap/' in content._content
+
+    def test_inline_marker_is_not_expanded(self):
+        content = make_content("<p>Write {% heatmap %} to insert the widget.</p>")
+
+        expand_heatmap_shortcode(content)
+
+        assert content._content == "<p>Write {% heatmap %} to insert the widget.</p>"
+
+    def test_code_sample_is_not_expanded(self):
+        content = make_content("<pre><code>{% heatmap %}</code></pre>")
+
+        expand_heatmap_shortcode(content)
+
+        assert content._content == "<pre><code>{% heatmap %}</code></pre>"
+
+    def test_only_first_shortcode_is_rendered(self, caplog):
+        content = make_content(
+            "<p>{% heatmap %}</p>\n<p>Between</p>\n<p>{% heatmap %}</p>"
+        )
+
+        expand_heatmap_shortcode(content)
+
+        assert content._content.count('id="writing-heatmap"') == 1
+        assert "{% heatmap %}" not in content._content
+        assert "contains 2 heatmap shortcodes" in caplog.text
+
+
 # ── Cross-round accumulation (the 298-vs-322 bug) ───────────────────────────
 
 
@@ -333,9 +399,7 @@ class TestCrossRoundAccumulation:
             generate_heatmap(
                 make_generators([], primary_dir, {"HEATMAP_WEEK_START": 0})
             )
-            generate_heatmap(
-                make_generators([], nested_dir, {"HEATMAP_WEEK_START": 1})
-            )
+            generate_heatmap(make_generators([], nested_dir, {"HEATMAP_WEEK_START": 1}))
 
             assert _read_json(primary_dir)["week_start"] == 0
             assert _read_json(nested_dir)["week_start"] == 1
