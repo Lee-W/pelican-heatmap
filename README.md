@@ -16,6 +16,7 @@ A [Pelican](https://getpelican.com) plugin that generates a GitHub-style writing
 - **Accessible** — keyboard-navigable year buttons with visible focus ring, `aria-label` for screen readers, Escape to dismiss tooltips, `aria-busy` loading state, `<noscript>` fallback support
 - **Touch-friendly** — dedicated touch handling for tooltips on mobile devices
 - **i18n** — built-in locales (`en`, `zh-TW`) via `window.HM_LANG`, or full custom override via `window.HM_LOCALE`
+- **Configurable week start** — choose any weekday via the Pelican setting `HEATMAP_WEEK_START`; defaults to Sunday
 - **Customizable** — every element has a named CSS class; colors and sizing controlled by CSS custom properties (`--hm-level-1`–`4`, `--hm-cell-size`, etc.)
 - **Configurable data source** — override the JSON URL via `data-src` attribute or `window.HM_DATA_URL`
 - **Zero dependencies** — no third-party libraries required
@@ -94,6 +95,21 @@ window.HM_LOCALE = { no_posts: '無文章' }; // override just one key
 All keys are optional — omitted keys fall back to the resolved locale's defaults.
 
 The heatmap data (`writing-heatmap.json`) is shared across all languages — only the UI strings change per locale.
+
+---
+
+## Week start
+
+The heatmap defaults to Sunday as the first day of the week. Set `HEATMAP_WEEK_START` in your Pelican configuration to change it:
+
+```python
+# pelicanconf.py
+HEATMAP_WEEK_START = 1  # Monday
+```
+
+Use JavaScript weekday numbers: `0` is Sunday, `1` is Monday, through `6` for Saturday. Invalid values fall back to Sunday. The setting applies consistently to weekday labels, grid columns, date windows, and the weekly streak calculation.
+
+If you provide custom `days` through `window.HM_LOCALE`, keep the array in Sunday-to-Saturday order; the widget rotates it to the configured week start.
 
 ---
 
@@ -221,11 +237,12 @@ The plugin writes `output/writing-heatmap.json` with the following shape:
     }
   },
   "total": 260,
-  "most_active_day": "2025-07-04"
+  "most_active_day": "2025-07-04",
+  "week_start": 0
 }
 ```
 
-The bundled widget calculates the current day streak and current week streak in the browser from `data`, using the visitor's current date. This keeps those live stats accurate even when your site is static and the JSON file was generated earlier. You can consume this file independently of the widget if you want to build your own visualization.
+The bundled widget calculates the current day streak and current week streak in the browser from `data`, using the visitor's current date and the generated `week_start` setting. This keeps those live stats accurate even when your site is static and the JSON file was generated earlier. You can consume this file independently of the widget if you want to build your own visualization.
 
 ## Requirements
 
