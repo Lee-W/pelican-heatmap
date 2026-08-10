@@ -19,12 +19,15 @@ output format:
 
 import json
 import logging
+import re
 import shutil
 from collections import defaultdict
 from collections.abc import Mapping
+from html import escape
 from pathlib import Path
 from typing import TypedDict
 
+from pelican.contents import Content
 from pelican.generators import ArticlesGenerator
 
 from pelican import Pelican, signals  # type: ignore[attr-defined]
@@ -33,6 +36,7 @@ logger = logging.getLogger(__name__)
 
 STATIC_DIR = Path(__file__).parent / "static"
 DEFAULT_WEEK_START = 0
+HEATMAP_SHORTCODE = re.compile(r"<p>\s*\{%\s+heatmap\s+%\}\s*</p>")
 
 
 class ArticleEntry(TypedDict):
@@ -92,6 +96,54 @@ def _get_article_generator(generators):
 def _article_url(article_url: str, siteurl: str) -> str:
     path = "/" + article_url.lstrip("/")
     return f"{siteurl.rstrip('/')}{path}" if siteurl else path
+
+
+def _shortcode_html(siteurl: str) -> str:
+    """Return the complete widget markup for a content shortcode."""
+    base_url = siteurl.rstrip("/")
+    stylesheet_url = escape(
+        f"{base_url}/static/heatmap/pelican_heatmap.css", quote=True
+    )
+    data_url = escape(f"{base_url}/writing-heatmap.json", quote=True)
+    script_url = escape(f"{base_url}/static/heatmap/pelican_heatmap.js", quote=True)
+
+    return "\n".join(
+        (
+            f'<link rel="stylesheet" href="{stylesheet_url}">',
+            f'<div id="writing-heatmap" data-src="{data_url}"></div>',
+            f'<script src="{script_url}" defer></script>',
+        )
+    )
+
+
+def expand_heatmap_shortcode(content_object: Content) -> None:
+    """Expand a standalone ``{% heatmap %}`` paragraph in parsed content."""
+    matches = list(HEATMAP_SHORTCODE.finditer(content_object._content))
+    if not matches:
+        return
+
+    siteurl = str(content_object.settings.get("SITEURL", ""))
+    widget_html = _shortcode_html(siteurl)
+    rendered = False
+
+    def replace_shortcode(_match: re.Match[str]) -> str:
+        nonlocal rendered
+        if rendered:
+            return ""
+        rendered = True
+        return widget_html
+
+    content_object._content = HEATMAP_SHORTCODE.sub(
+        replace_shortcode, content_object._content
+    )
+
+    if len(matches) > 1:
+        logger.warning(
+            "[writing_heatmap] %s contains %d heatmap shortcodes; only the first "
+            "was rendered",
+            content_object.source_path,
+            len(matches),
+        )
 
 
 def _week_start(settings: Mapping[str, object]) -> int:
@@ -236,6 +288,7 @@ def _reset_accumulator_for_testing() -> None:
 
 
 def register() -> None:
+    signals.content_object_init.connect(expand_heatmap_shortcode)
     signals.all_generators_finalized.connect(generate_heatmap)
     signals.all_generators_finalized.connect(copy_static)
     signals.finalized.connect(_reset_accumulator)
