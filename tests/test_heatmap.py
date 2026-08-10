@@ -81,7 +81,7 @@ def run_generate(
         return _read_json(tmpdir)
 
 
-def make_content(content: str, siteurl: str = "") -> Any:
+def make_content(content: str | None, siteurl: str = "") -> Any:
     """Return the content attributes used by the shortcode signal receiver."""
     return SimpleNamespace(
         _content=content,
@@ -303,6 +303,13 @@ class TestShortcode:
         assert content._content.count('id="writing-heatmap"') == 1
         assert "{% heatmap %}" not in content._content
         assert "contains 2 heatmap shortcodes" in caplog.text
+
+    def test_static_content_is_ignored(self):
+        content = make_content(None)
+
+        expand_heatmap_shortcode(content)
+
+        assert content._content is None
 
 
 # ── Cross-round accumulation (the 298-vs-322 bug) ───────────────────────────
