@@ -118,7 +118,11 @@ def _shortcode_html(siteurl: str) -> str:
 
 def expand_heatmap_shortcode(content_object: Content) -> None:
     """Expand a standalone ``{% heatmap %}`` paragraph in parsed content."""
-    matches = list(HEATMAP_SHORTCODE.finditer(content_object._content))
+    content = content_object._content
+    if not isinstance(content, str):
+        return
+
+    matches = list(HEATMAP_SHORTCODE.finditer(content))
     if not matches:
         return
 
@@ -133,9 +137,7 @@ def expand_heatmap_shortcode(content_object: Content) -> None:
         rendered = True
         return widget_html
 
-    content_object._content = HEATMAP_SHORTCODE.sub(
-        replace_shortcode, content_object._content
-    )
+    content_object._content = HEATMAP_SHORTCODE.sub(replace_shortcode, content)
 
     if len(matches) > 1:
         logger.warning(
