@@ -1,3 +1,9 @@
+## 0.7.1 (2026-08-10)
+
+### Fix
+
+- skip static files during heatmap shortcode expansion
+
 ## 0.7.0 (2026-08-10)
 
 ### Feat
