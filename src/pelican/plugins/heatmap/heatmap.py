@@ -12,7 +12,8 @@ output format:
       ...
     },
     "total": 42,
-    "most_active_day": "2025-03-01"
+    "most_active_day": "2025-03-01",
+    "week_start": 0
   }
 """
 
@@ -20,6 +21,7 @@ import json
 import logging
 import shutil
 from collections import defaultdict
+from collections.abc import Mapping
 from pathlib import Path
 from typing import TypedDict
 
@@ -30,6 +32,7 @@ from pelican import signals  # type: ignore[attr-defined]
 logger = logging.getLogger(__name__)
 
 STATIC_DIR = Path(__file__).parent / "static"
+DEFAULT_WEEK_START = 0
 
 
 class ArticleEntry(TypedDict):
@@ -50,6 +53,19 @@ def _get_article_generator(generators):
 def _article_url(article_url: str, siteurl: str) -> str:
     path = "/" + article_url.lstrip("/")
     return f"{siteurl.rstrip('/')}{path}" if siteurl else path
+
+
+def _week_start(settings: Mapping[str, object]) -> int:
+    value = settings.get("HEATMAP_WEEK_START", DEFAULT_WEEK_START)
+    if isinstance(value, int) and not isinstance(value, bool) and 0 <= value <= 6:
+        return value
+
+    logger.warning(
+        "[writing_heatmap] invalid HEATMAP_WEEK_START %r; using %d",
+        value,
+        DEFAULT_WEEK_START,
+    )
+    return DEFAULT_WEEK_START
 
 
 def copy_static(generators) -> None:
@@ -75,6 +91,7 @@ def generate_heatmap(generators) -> None:
 
     date_articles: defaultdict[str, list[ArticleEntry]] = defaultdict(list)
     siteurl = str(article_generator.settings.get("SITEURL", ""))
+    week_start = _week_start(article_generator.settings)
     for article in article_generator.articles:
         day_str = article.date.date().isoformat()
         date_articles[day_str].append(
@@ -99,6 +116,7 @@ def generate_heatmap(generators) -> None:
         "data": data,
         "total": total,
         "most_active_day": most_active_day,
+        "week_start": week_start,
     }
 
     output_path = Path(article_generator.output_path)

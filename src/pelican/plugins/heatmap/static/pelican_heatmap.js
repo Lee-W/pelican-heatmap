@@ -70,8 +70,36 @@
   const dataUrl =
     root.getAttribute("data-src") || window.HM_DATA_URL || "/writing-heatmap.json";
 
-  // ── Inject HTML ───────────────────────────────────────────
+  // ── Load JSON ─────────────────────────────────────────────
   root.setAttribute("aria-busy", "true");
+  let heatmapData = {},
+    allTotal = 0,
+    configuredWeekStart = 0,
+    weekStreak = 0;
+  try {
+    const json = await fetch(dataUrl).then((r) => r.json());
+    heatmapData = json.data ?? {};
+    allTotal = json.total ?? 0;
+    configuredWeekStart = Number(json.week_start ?? 0);
+  } catch (e) {
+    console.warn("[writing_heatmap] failed to load " + dataUrl, e);
+  }
+
+  const weekStartDay =
+    Number.isInteger(configuredWeekStart) &&
+    configuredWeekStart >= 0 &&
+    configuredWeekStart <= 6
+      ? configuredWeekStart
+      : 0;
+  const orderedDays = L.days
+    .slice(weekStartDay)
+    .concat(L.days.slice(0, weekStartDay));
+
+  function daysFromWeekStart(date) {
+    return (date.getDay() - weekStartDay + 7) % 7;
+  }
+
+  // ── Inject HTML ───────────────────────────────────────────
   root.innerHTML = `
     <div class="hm-stats">
       <div class="hm-stat-card">
@@ -103,7 +131,7 @@
         <div class="hm-month-labels" id="hm-month-labels"></div>
         <div class="hm-grid-wrap">
           <div class="hm-day-labels">
-            ${L.days.map((d) => `<span>${d}</span>`).join("")}
+            ${orderedDays.map((d) => `<span>${d}</span>`).join("")}
           </div>
           <div class="hm-grid" id="hm-grid"></div>
         </div>
@@ -118,18 +146,6 @@
 
     <div class="hm-tooltip" id="hm-tooltip"></div>
   `;
-
-  // ── Load JSON ─────────────────────────────────────────────
-  let heatmapData = {},
-    allTotal = 0,
-    weekStreak = 0;
-  try {
-    const json = await fetch(dataUrl).then((r) => r.json());
-    heatmapData = json.data ?? {};
-    allTotal = json.total ?? 0;
-  } catch (e) {
-    console.warn("[writing_heatmap] failed to load " + dataUrl, e);
-  }
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -165,7 +181,7 @@
   function calculateWeeklyStreak() {
     let streak = 0;
     const weekStart = new Date(today);
-    weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7));
+    weekStart.setDate(weekStart.getDate() - daysFromWeekStart(weekStart));
 
     function weekHasPosts(start) {
       const day = new Date(start);
@@ -206,13 +222,15 @@
   }
   function windowDates(offset) {
     const base = new Date(today);
-    base.setDate(base.getDate() + (6 - today.getDay())); // 本週六
+    base.setDate(base.getDate() + (6 - daysFromWeekStart(base)));
     const end = new Date(base);
     end.setFullYear(end.getFullYear() - offset);
     const start = new Date(end);
     start.setDate(start.getDate() - 364);
-    const sd = start.getDay();
-    if (sd !== 0) start.setDate(start.getDate() - sd);
+    const daysIntoWeek = daysFromWeekStart(start);
+    if (daysIntoWeek !== 0) {
+      start.setDate(start.getDate() - daysIntoWeek);
+    }
     return { start, end };
   }
   function countInRange(start, end) {
@@ -268,7 +286,7 @@
     let colIndex = 0;
 
     while (cur <= end) {
-      if (cur.getDay() === 0) {
+      if (cur.getDay() === weekStartDay) {
         colInfo.push(cur.getMonth());
         colIndex++;
       }

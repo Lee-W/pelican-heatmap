@@ -67,7 +67,20 @@ class TestJSONStructure:
             "data",
             "total",
             "most_active_day",
+            "week_start",
         }
+
+    def test_week_start_defaults_to_sunday(self):
+        out = run_generate([])
+        assert out["week_start"] == 0
+
+    def test_week_start_uses_pelican_setting(self):
+        out = run_generate([], {"HEATMAP_WEEK_START": 1})
+        assert out["week_start"] == 1
+
+    def test_invalid_week_start_falls_back_to_sunday(self):
+        out = run_generate([], {"HEATMAP_WEEK_START": 7})
+        assert out["week_start"] == 0
 
     def test_data_entry_keys(self):
         articles = [make_article("A", "/a/", "2025-01-01")]
@@ -185,3 +198,18 @@ class TestPathsAndAssets:
             output_static = Path(tmpdir) / "static" / "heatmap"
             assert (output_static / "pelican_heatmap.css").is_file()
             assert (output_static / "pelican_heatmap.js").is_file()
+
+    def test_week_start_is_configurable_across_widget(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            generators = make_generators([], tmpdir)
+            copy_static(generators)
+
+            script = (
+                Path(tmpdir) / "static" / "heatmap" / "pelican_heatmap.js"
+            ).read_text(encoding="utf-8")
+
+            assert "Number(json.week_start ?? 0)" in script
+            assert "orderedDays.map" in script
+            assert "weekStart.getDate() - daysFromWeekStart(weekStart)" in script
+            assert "6 - daysFromWeekStart(base)" in script
+            assert "cur.getDay() === weekStartDay" in script
