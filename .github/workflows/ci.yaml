@@ -16,7 +16,7 @@ jobs:
           fetch-depth: 0
 
       - name: Install the latest version of uv
-        uses: astral-sh/setup-uv@v8.3.1
+        uses: astral-sh/setup-uv@v10.3.2
         with:
           enable-cache: true
           version: "latest"
@@ -27,7 +27,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          uv sync --python ${{ matrix.python-version }}
+          uv sync --locked --no-sources --python ${{ matrix.python-version }}
 
       - name: Run pre-commit hooks
         run: |
