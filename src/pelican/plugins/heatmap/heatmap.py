@@ -25,7 +25,7 @@ from collections import defaultdict
 from collections.abc import Mapping
 from html import escape
 from pathlib import Path
-from typing import TypedDict
+from typing import Any, TypedDict
 
 from pelican.contents import Content
 from pelican.generators import ArticlesGenerator
@@ -88,7 +88,7 @@ _KNOWN_OUTPUT_PATHS: dict[str, int] = {}
 _ACCUMULATION_DEPTH = 0
 
 
-def _get_article_generator(generators):
+def _get_article_generator(generators: Any) -> Any:
     """Return the first ArticlesGenerator found in generators, or None."""
     return next((g for g in generators if isinstance(g, ArticlesGenerator)), None)
 
@@ -161,7 +161,7 @@ def _week_start(settings: Mapping[str, object]) -> int:
     return DEFAULT_WEEK_START
 
 
-def copy_static(generators) -> None:
+def copy_static(generators: Any) -> None:
     """Copy CSS and JS to output/static/heatmap/."""
     article_generator = _get_article_generator(generators)
     if article_generator is None:
@@ -214,7 +214,7 @@ def _write_heatmap_json() -> None:
     logger.info("[writing_heatmap] generated writing-heatmap.json (%d articles)", total)
 
 
-def generate_heatmap(generators) -> None:
+def generate_heatmap(generators: Any) -> None:
     global _ACCUMULATION_DEPTH
 
     _ACCUMULATION_DEPTH += 1

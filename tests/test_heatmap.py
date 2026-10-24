@@ -7,6 +7,8 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, cast
 
+import pytest
+
 # Import the functions we want to test directly (no Pelican runtime needed)
 from pelican.plugins.heatmap.heatmap import (
     _reset_accumulator_for_testing,
@@ -18,7 +20,9 @@ from pelican.plugins.heatmap.heatmap import (
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 
-def make_article(title: str, url: str, date_str: str, source_path: str | None = None):
+def make_article(
+    title: str, url: str, date_str: str, source_path: str | None = None
+) -> SimpleNamespace:
     """Return a minimal mock article object.
 
     `source_path` defaults to `url` (unique per article in nearly every
@@ -57,15 +61,15 @@ def make_generators(
     return [g]
 
 
-def _read_json(output_path: str) -> dict:
+def _read_json(output_path: str) -> dict[str, Any]:
     json_path = os.path.join(output_path, "writing-heatmap.json")
     with open(json_path) as f:
-        return cast(dict, json.load(f))
+        return cast(dict[str, Any], json.load(f))
 
 
 def run_generate(
     articles: Sequence[Any], settings: dict[str, Any] | None = None
-) -> dict:
+) -> dict[str, Any]:
     """Reset the accumulator, run a single fresh round, return the parsed JSON output.
 
     Resetting first keeps every pre-existing single-round test isolated
@@ -94,7 +98,7 @@ def make_content(content: str | None, siteurl: str = "") -> Any:
 
 
 class TestJSONStructure:
-    def test_top_level_keys(self):
+    def test_top_level_keys(self) -> None:
         articles = [make_article("A", "/a/", "2025-01-01")]
         out = run_generate(articles)
         assert set(out.keys()) == {
@@ -104,41 +108,41 @@ class TestJSONStructure:
             "week_start",
         }
 
-    def test_week_start_defaults_to_sunday(self):
+    def test_week_start_defaults_to_sunday(self) -> None:
         out = run_generate([])
         assert out["week_start"] == 0
 
-    def test_week_start_uses_pelican_setting(self):
+    def test_week_start_uses_pelican_setting(self) -> None:
         out = run_generate([], {"HEATMAP_WEEK_START": 1})
         assert out["week_start"] == 1
 
-    def test_invalid_week_start_falls_back_to_sunday(self):
+    def test_invalid_week_start_falls_back_to_sunday(self) -> None:
         out = run_generate([], {"HEATMAP_WEEK_START": 7})
         assert out["week_start"] == 0
 
-    def test_data_entry_keys(self):
+    def test_data_entry_keys(self) -> None:
         articles = [make_article("A", "/a/", "2025-01-01")]
         out = run_generate(articles)
         entry = out["data"]["2025-01-01"]
         assert set(entry.keys()) == {"count", "articles"}
 
-    def test_article_entry_keys(self):
+    def test_article_entry_keys(self) -> None:
         articles = [make_article("Hello", "/hello/", "2025-03-10")]
         out = run_generate(articles)
         article = out["data"]["2025-03-10"]["articles"][0]
         assert set(article.keys()) == {"title", "url"}
 
-    def test_url_has_leading_slash(self):
+    def test_url_has_leading_slash(self) -> None:
         articles = [make_article("A", "posts/a.html", "2025-01-01")]
         out = run_generate(articles)
         assert out["data"]["2025-01-01"]["articles"][0]["url"].startswith("/")
 
-    def test_no_articles_produces_empty_json(self):
+    def test_no_articles_produces_empty_json(self) -> None:
         out = run_generate([])
         assert out["total"] == 0
         assert out["data"] == {}
 
-    def test_output_dir_created_if_missing(self):
+    def test_output_dir_created_if_missing(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             output_path = os.path.join(tmpdir, "nested", "output")
             articles = [make_article("A", "/a/", "2025-01-01")]
@@ -151,13 +155,13 @@ class TestJSONStructure:
 
 
 class TestCounts:
-    def test_single_article(self):
+    def test_single_article(self) -> None:
         articles = [make_article("A", "/a/", "2025-06-01")]
         out = run_generate(articles)
         assert out["data"]["2025-06-01"]["count"] == 1
         assert out["total"] == 1
 
-    def test_multiple_articles_same_day(self):
+    def test_multiple_articles_same_day(self) -> None:
         articles = [
             make_article("A", "/a/", "2025-06-01"),
             make_article("B", "/b/", "2025-06-01"),
@@ -167,7 +171,7 @@ class TestCounts:
         assert out["data"]["2025-06-01"]["count"] == 3
         assert out["total"] == 3
 
-    def test_articles_across_multiple_days(self):
+    def test_articles_across_multiple_days(self) -> None:
         articles = [
             make_article("A", "/a/", "2025-01-01"),
             make_article("B", "/b/", "2025-01-03"),
@@ -178,7 +182,7 @@ class TestCounts:
         assert out["data"]["2025-01-03"]["count"] == 2
         assert out["total"] == 3
 
-    def test_data_keys_are_sorted(self):
+    def test_data_keys_are_sorted(self) -> None:
         articles = [
             make_article("C", "/c/", "2025-03-01"),
             make_article("A", "/a/", "2025-01-01"),
@@ -188,7 +192,7 @@ class TestCounts:
         keys = list(out["data"].keys())
         assert keys == sorted(keys)
 
-    def test_most_active_day(self):
+    def test_most_active_day(self) -> None:
         articles = [
             make_article("A", "/a/", "2025-01-01"),
             make_article("B", "/b/", "2025-02-01"),
@@ -197,7 +201,7 @@ class TestCounts:
         out = run_generate(articles)
         assert out["most_active_day"] == "2025-02-01"
 
-    def test_article_order_preserved_within_day(self):
+    def test_article_order_preserved_within_day(self) -> None:
         articles = [
             make_article("First", "/first/", "2025-05-01"),
             make_article("Second", "/second/", "2025-05-01"),
@@ -211,12 +215,12 @@ class TestCounts:
 
 
 class TestPathsAndAssets:
-    def test_article_url_uses_siteurl_subpath(self):
+    def test_article_url_uses_siteurl_subpath(self) -> None:
         articles = [make_article("A", "posts/a.html", "2025-01-01")]
         out = run_generate(articles, {"SITEURL": "/blog"})
         assert out["data"]["2025-01-01"]["articles"][0]["url"] == "/blog/posts/a.html"
 
-    def test_article_url_uses_absolute_siteurl(self):
+    def test_article_url_uses_absolute_siteurl(self) -> None:
         articles = [make_article("A", "/posts/a.html", "2025-01-01")]
         out = run_generate(articles, {"SITEURL": "https://example.com/blog/"})
         assert (
@@ -224,7 +228,7 @@ class TestPathsAndAssets:
             == "https://example.com/blog/posts/a.html"
         )
 
-    def test_copy_static_writes_assets_to_documented_directory(self):
+    def test_copy_static_writes_assets_to_documented_directory(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             generators = make_generators([], tmpdir)
             copy_static(generators)
@@ -233,7 +237,7 @@ class TestPathsAndAssets:
             assert (output_static / "pelican_heatmap.css").is_file()
             assert (output_static / "pelican_heatmap.js").is_file()
 
-    def test_week_start_is_configurable_across_widget(self):
+    def test_week_start_is_configurable_across_widget(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             generators = make_generators([], tmpdir)
             copy_static(generators)
@@ -253,7 +257,7 @@ class TestPathsAndAssets:
 
 
 class TestShortcode:
-    def test_standalone_shortcode_expands_complete_widget(self):
+    def test_standalone_shortcode_expands_complete_widget(self) -> None:
         content = make_content("<p>Before</p>\n<p>{% heatmap %}</p>\n<p>After</p>")
 
         expand_heatmap_shortcode(content)
@@ -267,7 +271,7 @@ class TestShortcode:
         )
         assert "{% heatmap %}" not in content._content
 
-    def test_shortcode_uses_siteurl_for_assets_and_data(self):
+    def test_shortcode_uses_siteurl_for_assets_and_data(self) -> None:
         content = make_content("<p>{% heatmap %}</p>", "https://example.com/blog/en/")
 
         expand_heatmap_shortcode(content)
@@ -279,21 +283,23 @@ class TestShortcode:
         )
         assert 'src="https://example.com/blog/en/static/heatmap/' in content._content
 
-    def test_inline_marker_is_not_expanded(self):
+    def test_inline_marker_is_not_expanded(self) -> None:
         content = make_content("<p>Write {% heatmap %} to insert the widget.</p>")
 
         expand_heatmap_shortcode(content)
 
         assert content._content == "<p>Write {% heatmap %} to insert the widget.</p>"
 
-    def test_code_sample_is_not_expanded(self):
+    def test_code_sample_is_not_expanded(self) -> None:
         content = make_content("<pre><code>{% heatmap %}</code></pre>")
 
         expand_heatmap_shortcode(content)
 
         assert content._content == "<pre><code>{% heatmap %}</code></pre>"
 
-    def test_only_first_shortcode_is_rendered(self, caplog):
+    def test_only_first_shortcode_is_rendered(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
         content = make_content(
             "<p>{% heatmap %}</p>\n<p>Between</p>\n<p>{% heatmap %}</p>"
         )
@@ -304,7 +310,7 @@ class TestShortcode:
         assert "{% heatmap %}" not in content._content
         assert "contains 2 heatmap shortcodes" in caplog.text
 
-    def test_static_content_is_ignored(self):
+    def test_static_content_is_ignored(self) -> None:
         content = make_content(None)
 
         expand_heatmap_shortcode(content)
@@ -316,7 +322,7 @@ class TestShortcode:
 
 
 class TestCrossRoundAccumulation:
-    def test_two_rounds_accumulate_to_combined_total(self):
+    def test_two_rounds_accumulate_to_combined_total(self) -> None:
         """Simulates the primary (zh) round then the nested (en) subsite round."""
         _reset_accumulator_for_testing()
         with (
@@ -349,7 +355,7 @@ class TestCrossRoundAccumulation:
             assert nested_out["total"] == 3
             assert primary_out == nested_out
 
-    def test_repeated_source_path_does_not_inflate_total(self):
+    def test_repeated_source_path_does_not_inflate_total(self) -> None:
         """Simulates a crashed livereload rebuild that left the accumulator un-reset."""
         _reset_accumulator_for_testing()
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -366,7 +372,7 @@ class TestCrossRoundAccumulation:
             assert out["total"] == 1
             assert out["data"]["2025-01-01"]["count"] == 1
 
-    def test_each_round_url_uses_its_own_siteurl(self):
+    def test_each_round_url_uses_its_own_siteurl(self) -> None:
         """zh articles link to the primary site; en articles link under /en/."""
         _reset_accumulator_for_testing()
         with (
@@ -397,7 +403,7 @@ class TestCrossRoundAccumulation:
             assert "/en/" not in zh_url
             assert en_url == "https://blog.example.com/en/posts/en-a.html"
 
-    def test_each_output_uses_its_own_week_start_setting(self):
+    def test_each_output_uses_its_own_week_start_setting(self) -> None:
         _reset_accumulator_for_testing()
         with (
             tempfile.TemporaryDirectory() as primary_dir,
