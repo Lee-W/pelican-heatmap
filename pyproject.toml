@@ -33,18 +33,9 @@ dev = [
 
 base = ["poethepoet>=0.41.0"]
 
-test = [
-  "pytest>=9",
-  "pytest-cov>=4",
-  "pytest-xdist>=3.1.0",
-]
+test = ["pytest>=9", "pytest-cov>=4", "pytest-xdist>=3.1.0"]
 
-linters = [
-  "ruff>=0.15.1",
-  "mypy>=1.19.1",
-  "prek>=0.3.3",
-  "commitizen>=4.13.9",
-]
+linters = ["ruff>=0.15.1", "mypy>=1.19.1", "prek>=0.3.3", "commitizen>=4.13.9"]
 
 [project.urls]
 Homepage = "https://github.com/Lee-W/pelican-heatmap"
@@ -52,7 +43,7 @@ Repository = "https://github.com/Lee-W/pelican-heatmap"
 Issues = "https://github.com/Lee-W/pelican-heatmap/issues"
 
 [build-system]
-requires = ["uv_build >= 0.11.25, <0.12.0"]
+requires = ["uv_build >= 0.13.5, <0.14.0"]
 build-backend = "uv_build"
 
 [tool.uv.build-backend]
@@ -83,9 +74,9 @@ ignore_missing_imports = true
 
 [tool.codespell]
 # Ref: https://github.com/codespell-project/codespell#using-a-config-file
-skip = '.git*,*.svg,*.lock'
+skip = '.git*,*.svg,*.lock,CHANGELOG.md'
 check-hidden = true
-ignore-words-list = 'asend'
+ignore-words-list = 'asend,alltime'
 
 [tool.poe.tasks]
 format.help = "Format the code"
@@ -122,7 +113,7 @@ version_provider = "uv"
 update_changelog_on_bump = true
 major_version_zero = true
 
-[tool.pytest.ini_options]
+[tool.pytest]
 testpaths = ["tests"]
 addopts = ["--cov=pelican.plugins.heatmap", "--cov-report=term-missing"]
 
