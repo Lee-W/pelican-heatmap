@@ -31,4 +31,4 @@ jobs:
 
       - name: Run pre-commit hooks
         run: |
-          uv run poe ci
+          uv run --locked poe ci
